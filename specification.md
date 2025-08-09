@@ -30,7 +30,7 @@ Object가 아닌 제일 기본적인 단위의 Value이다. 모든 Evaluation Va
 !t/!f      - bool
 ```
 
-## Anonymus Object
+## Anonymous Object
 
 익명 Object의 경우 ()로 둘러싸인 모든 내용은 Evaluation Value로 간주된다. 익명 Object로 간주되기 위해서는 몇가지 조건이 존재한다.
 
