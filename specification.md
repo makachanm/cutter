@@ -1,5 +1,3 @@
-# CUTTER : Compact Universial Tokenized Text Excution Rules
-
 ## Object
 Object는 Cutter의 기본 객체 단위이다. Object는 값을 띌 수 있으며, 호출 가능한 형태다. <br>
 Object는 Evaluation Value를 가지며, 모든 Object는 Evaluation Value를 반환하여야 한다. <br> <br>
@@ -20,7 +18,7 @@ Object는 호출 시 인자를 가질 수 있다.
 > Hello World from Cutter!
 ``` 
 
-## Noraml Text
+## Normal Text
 Cutter는 모든 텍스트가 일반 출력을 통해 출력된다. @를 접두사로 호출된 Object의 Evaluation Value는 모두 최종적으로 텍스트로 치환되어 출력된다.
 
 ## Atom Value

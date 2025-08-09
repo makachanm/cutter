@@ -1,1 +1,1 @@
-# cutter
+# CUTTER : Compact Universial Tokenized Template Excution Ruleset
