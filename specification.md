@@ -6,7 +6,7 @@ Object는 Evaluation Value를 가지며, 모든 Object는 Evaluation Value를 �
 ```
 @define(foo 5)
 
-@foo
+@foo()
 > 5
 ```
 
@@ -29,11 +29,3 @@ Object가 아닌 제일 기본적인 단위의 Value이다. 모든 Evaluation Va
 3.141592   - real
 !t/!f      - bool
 ```
-
-## Anonymous Object
-
-익명 Object의 경우 ()로 둘러싸인 모든 내용은 Evaluation Value로 간주된다. 익명 Object로 간주되기 위해서는 몇가지 조건이 존재한다.
-
-- Object의 호출의 인자로 사용될 때에만 인정받을 수 있다.
-- 호출자의 이름이 없는 상태여야 한다.
-- Evaluation Value가 무조건 존재해야만 한다.

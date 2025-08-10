@@ -23,7 +23,7 @@ func NewLexer() *Lexer {
 
 func (l *Lexer) DoLex(input string) []LexerToken {
 	raw_tokens := NewTokenizer().doTokenize(input, uint64(len(input)))
-	l.queue = NewTokenQueue(raw_tokens, uint64(len(raw_tokens)))
+	l.queue = NewTokenQueue(raw_tokens, int64(len(raw_tokens)))
 
 	l.buffer = make([]string, 0)
 
@@ -66,6 +66,7 @@ func (l *Lexer) DoLex(input string) []LexerToken {
 
 		case STRING_QUOTEMARK:
 			if l.state != STATE_STRINGVALUE {
+				l.flushBuffer()
 				l.state = STATE_STRINGVALUE
 			} else {
 				l.flushBuffer()
@@ -107,6 +108,10 @@ func (l *Lexer) DoLex(input string) []LexerToken {
 			}
 
 			l.results = append(l.results, NewLexerToken(VALUE, l.getValues(symbol.GetData())))
+
+		case TERMINATOR:
+			l.flushBuffer()
+			l.results = append(l.results, NewLexerToken(TERMINATOR, NewData()))
 		}
 	}
 
@@ -149,14 +154,19 @@ func (l *Lexer) flushBuffer() {
 		return
 	}
 
+	var tokentype TokenType
+
 	switch l.state {
 	case STATE_STRINGVALUE:
 		l.buffer = l.buffer[:0]
 		data = NewStrData(buffer_d)
+		tokentype = VALUE
 
 	case STATE_NORMSTRINGS:
+		l.buffer = l.buffer[:0]
 		data = NewNormData(buffer_d)
+		tokentype = NORM_STRINGS
 	}
 
-	l.results = append(l.results, NewLexerToken(VALUE, data))
+	l.results = append(l.results, NewLexerToken(tokentype, data))
 }

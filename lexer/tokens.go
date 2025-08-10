@@ -3,7 +3,7 @@ package lexer
 type TokenType int
 
 const (
-	KEYWORD_CALL TokenType = iota + 0
+	KEYWORD_CALL TokenType = iota + 1
 	KEYWORD_DEFINE
 	KEYWORD_BRACKET_OPEN
 	KEYWORD_BRACKET_CLOSE
@@ -17,6 +17,8 @@ const (
 
 	NORM_STRINGS
 	VALUE
+
+	TERMINATOR
 )
 
 type Token struct {
@@ -93,7 +95,7 @@ func NewStrData(d_data string) LexerTokenData {
 }
 
 func NewObjNameData(d_data string) LexerTokenData {
-	return LexerTokenData{Type: DATA_OBJNAME, StrData: d_data}
+	return LexerTokenData{Type: DATA_OBJNAME, ObjNameData: d_data}
 }
 
 func NewNormData(d_data string) LexerTokenData {

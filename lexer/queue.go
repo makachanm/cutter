@@ -2,15 +2,15 @@ package lexer
 
 type TokenQueue struct {
 	contents []Token
-	size     uint64
-	pointer  uint64
+	size     int64
+	pointer  int64
 }
 
-func NewTokenQueue(c []Token, s uint64) *TokenQueue {
+func NewTokenQueue(c []Token, s int64) *TokenQueue {
 	q := new(TokenQueue)
 	q.contents = c
 	q.size = s
-	q.pointer = 0
+	q.pointer = -1
 
 	return q
 }
@@ -20,7 +20,7 @@ func (q *TokenQueue) Pop() Token {
 		return Token{}
 	}
 
-	q.pointer++
+	q.pointer += 1
 	return q.contents[q.pointer]
 }
 
@@ -29,7 +29,7 @@ func (q *TokenQueue) Pushback() Token {
 		return Token{}
 	}
 
-	q.pointer--
+	q.pointer -= 1
 	return q.contents[q.pointer]
 }
 

@@ -37,6 +37,7 @@ func (tk *Tokenizer) doTokenize(input string, size uint64) []Token {
 				tk.tokenized = append(tk.tokenized, NewDataToken(NORM_STRINGS, strings.Join(buffer, "")))
 			}
 
+			tk.tokenized = append(tk.tokenized, NewToken(TERMINATOR))
 			break
 		}
 
