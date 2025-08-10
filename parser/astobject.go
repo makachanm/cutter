@@ -39,6 +39,10 @@ type ValueObject struct {
 	StringData string
 }
 
+type NormStringObject struct {
+	Data string
+}
+
 func makeIntValueObj(input int64) ValueObject {
 	return ValueObject{Type: INTGER, IntData: input}
 }
@@ -60,6 +64,8 @@ type BodyType int
 const (
 	FUCNTION_DEFINITION BodyType = iota + 1
 	FUNCTION_CALL
+
+	NORM_STRINGS
 )
 
 type HeadNode struct {
@@ -71,6 +77,7 @@ type BodyObject struct {
 
 	Func FunctionObject
 	Call CallObject
+	Norm NormStringObject
 }
 
 func NewFunctionBodyObject(funs FunctionObject) BodyObject {

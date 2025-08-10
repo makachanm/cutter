@@ -58,6 +58,12 @@ func (p *Parser) DoParse(tokens []lexer.LexerToken) HeadNode {
 				Func: fun,
 			})
 
+		case lexer.NORM_STRINGS:
+			head.Bodys = append(head.Bodys, BodyObject{
+				Type: NORM_STRINGS,
+				Norm: NormStringObject{Data: c_token.Data.NormData},
+			})
+
 		default:
 			continue
 		}
@@ -119,7 +125,6 @@ func (p *Parser) doDefineParse() FunctionObject {
 	}
 
 	fun.Name = object.Data.ObjNameData
-	fmt.Println(object)
 
 	for object.Type != lexer.KEYWORD_BRACKET_CLOSE {
 		object, _ = p.targets.Pop()
