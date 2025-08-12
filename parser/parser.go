@@ -104,7 +104,6 @@ func (p *Parser) doCallParse() CallObject {
 			p.targets.Pushback()
 
 			if next.Type != lexer.KEYWORD_BRACKET_OPEN {
-				fmt.Printf("Adding callable arg: %s\n", object.Data.ObjNameData)
 				call.CallableArgs = append(call.CallableArgs, CallObject{Name: object.Data.ObjNameData})
 			} else {
 				p.targets.Pushback()

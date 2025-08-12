@@ -17,8 +17,7 @@ type VMDataObject struct {
 }
 
 type VMFunctionObject struct {
-	NeededArgsNames []string
-	Op              []VMInstr
+	JumpPc int
 }
 
 type VMArgumentRegisters struct {
@@ -27,12 +26,13 @@ type VMArgumentRegisters struct {
 
 func NewRegister() VMArgumentRegisters {
 	return VMArgumentRegisters{
-		ArgumentRegisters: make([]VMDataObject, 64),
+		ArgumentRegisters: make([]VMDataObject, 32),
 	}
 }
 
 func (rg *VMArgumentRegisters) ClearRegisters() {
 	rg.ArgumentRegisters = rg.ArgumentRegisters[:0]
+	rg.ArgumentRegisters = make([]VMDataObject, 32)
 }
 
 func (rg *VMArgumentRegisters) InsertRegister(idx int, val VMDataObject) {

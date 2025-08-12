@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"cutter/parser"
 	"fmt"
 	"strconv"
 )
@@ -18,15 +17,16 @@ func NewIO() RuntimeIO {
 	}
 }
 
-func (io *RuntimeIO) WriteObjectToStream(data parser.ValueObject) {
+func (io *RuntimeIO) WriteObjectToStream(data VMDataObject) {
+	fmt.Println("Writing to IO:", data)
 	switch data.Type {
-	case parser.STRING:
+	case STRING:
 		io.buffer = append(io.buffer, data.StringData)
-	case parser.INTGER:
+	case INTGER:
 		io.buffer = append(io.buffer, strconv.FormatInt(data.IntData, 10))
-	case parser.REAL:
+	case REAL:
 		io.buffer = append(io.buffer, strconv.FormatFloat(data.FloatData, 'f', -1, 64))
-	case parser.BOOLEAN:
+	case BOOLEAN:
 		var d string
 		if data.BoolData {
 			d = "!t"
@@ -39,12 +39,8 @@ func (io *RuntimeIO) WriteObjectToStream(data parser.ValueObject) {
 	io.FlushIO()
 }
 
-func (io *RuntimeIO) WriteNorm(data parser.NormStringObject) {
-	io.buffer = append(io.buffer, data.Data)
-	io.FlushIO()
-}
-
 func (io *RuntimeIO) FlushIO() {
+	fmt.Println("Flushing ")
 	for elem := range io.buffer {
 		fmt.Print(elem)
 	}

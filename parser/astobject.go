@@ -20,7 +20,7 @@ type FunctionObject struct {
 	Type FunctionType
 
 	Args       []CallObject
-	FuncBodys  CallObject
+	FuncBodys  []BodyObject
 	ValueBodys ValueObject
 }
 
