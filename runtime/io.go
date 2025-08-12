@@ -9,37 +9,44 @@ import (
 // TODO: File IO
 
 type RuntimeIO struct {
-	buffer chan string
+	buffer []string
 }
 
 func NewIO() RuntimeIO {
 	return RuntimeIO{
-		buffer: make(chan string),
+		buffer: make([]string, 0),
 	}
 }
 
-func (io *RuntimeIO) WriteObjectToStream(data Function) {
-	switch data.Body.ValueBodys.Type {
+func (io *RuntimeIO) WriteObjectToStream(data parser.ValueObject) {
+	switch data.Type {
 	case parser.STRING:
-		io.buffer <- data.Body.ValueBodys.StringData
+		io.buffer = append(io.buffer, data.StringData)
 	case parser.INTGER:
-		io.buffer <- strconv.FormatInt(data.Body.ValueBodys.IntData, 10)
+		io.buffer = append(io.buffer, strconv.FormatInt(data.IntData, 10))
 	case parser.REAL:
-		io.buffer <- strconv.FormatFloat(data.Body.ValueBodys.FloatData, 'f', -1, 64)
+		io.buffer = append(io.buffer, strconv.FormatFloat(data.FloatData, 'f', -1, 64))
 	case parser.BOOLEAN:
 		var d string
-		if data.Body.ValueBodys.BoolData {
+		if data.BoolData {
 			d = "!t"
 		} else {
 			d = "!f"
 		}
 
-		io.buffer <- d
+		io.buffer = append(io.buffer, d)
 	}
+	io.FlushIO()
+}
+
+func (io *RuntimeIO) WriteNorm(data parser.NormStringObject) {
+	io.buffer = append(io.buffer, data.Data)
+	io.FlushIO()
 }
 
 func (io *RuntimeIO) FlushIO() {
 	for elem := range io.buffer {
 		fmt.Print(elem)
 	}
+	io.buffer = io.buffer[:0]
 }
