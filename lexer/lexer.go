@@ -102,10 +102,10 @@ func (l *Lexer) DoLex(input string) []LexerToken {
 				continue
 			}
 
-			if l.state == STATE_OBJNAME {
-				l.results = append(l.results, NewLexerToken(VALUE, NewObjNameData(symbol.GetData())))
-				continue
-			}
+			//if l.state == STATE_OBJNAME {
+			//	l.results = append(l.results, NewLexerToken(VALUE, NewObjNameData(symbol.GetData())))
+			//	continue
+			//}
 
 			l.results = append(l.results, NewLexerToken(VALUE, l.getValues(symbol.GetData())))
 
@@ -141,9 +141,10 @@ func (l *Lexer) getValues(data string) LexerTokenData {
 			panic(err)
 		}
 		return NewRealData(d)
-	}
 
-	return NewData()
+	default:
+		return NewObjNameData(data)
+	}
 }
 
 func (l *Lexer) flushBuffer() {

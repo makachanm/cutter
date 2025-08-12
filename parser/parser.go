@@ -85,6 +85,9 @@ func (p *Parser) doCallParse() CallObject {
 	object = p.validCheckPop(lexer.KEYWORD_BRACKET_OPEN)
 	for object.Type != lexer.KEYWORD_BRACKET_CLOSE {
 		object, _ = p.targets.Pop()
+		if object.Type == lexer.WHITESPACE {
+			continue
+		}
 
 		switch object.Data.Type {
 		case lexer.DATA_INT:
@@ -101,10 +104,12 @@ func (p *Parser) doCallParse() CallObject {
 			p.targets.Pushback()
 
 			if next.Type != lexer.KEYWORD_BRACKET_OPEN {
-				call.CallableArgs = append(call.CallableArgs, CallObject{Name: next.Data.ObjNameData})
+				fmt.Printf("Adding callable arg: %s\n", object.Data.ObjNameData)
+				call.CallableArgs = append(call.CallableArgs, CallObject{Name: object.Data.ObjNameData})
 			} else {
 				p.targets.Pushback()
 				subcall := p.doCallParse()
+				fmt.Println(subcall)
 
 				call.CallableArgs = append(call.CallableArgs, subcall)
 			}
@@ -135,7 +140,7 @@ func (p *Parser) doDefineParse() FunctionObject {
 			p.targets.Pushback()
 
 			if next.Type != lexer.KEYWORD_BRACKET_OPEN {
-				fun.Args = append(fun.Args, CallObject{Name: next.Data.ObjNameData})
+				fun.Args = append(fun.Args, CallObject{Name: object.Data.ObjNameData})
 			} else {
 				p.targets.Pushback()
 				fun.Args = append(fun.Args, p.doCallParse())
