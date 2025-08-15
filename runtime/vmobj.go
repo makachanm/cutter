@@ -29,7 +29,8 @@ type VMArgumentRegisters struct {
 
 func NewRegister() VMArgumentRegisters {
 	return VMArgumentRegisters{
-		ArgumentRegisters: make([]VMDataObject, 64),
+		ArgumentRegisters:   make([]VMDataObject, 64),
+		ReturnValueRegister: VMDataObject{},
 	}
 }
 
@@ -44,6 +45,14 @@ func (rg *VMArgumentRegisters) InsertRegister(idx int, val VMDataObject) {
 
 func (rg *VMArgumentRegisters) GetRegister(idx int) VMDataObject {
 	return rg.ArgumentRegisters[idx]
+}
+
+func (rg *VMArgumentRegisters) InsertResult(val VMDataObject) {
+	rg.ReturnValueRegister = val
+}
+
+func (rg *VMArgumentRegisters) GetResult() VMDataObject {
+	return rg.ReturnValueRegister
 }
 
 type VMMEMObjectTable struct {
@@ -126,8 +135,10 @@ type ValueType int
 const (
 	OpRegSet VMOp = iota + 1
 	OpMemSet
+	OpRslSet
 	OpRegMov
 	OpMemMov
+	OpRelMov
 	OpLdr
 	OpStr
 
@@ -136,12 +147,26 @@ const (
 	OpReturn
 
 	OpSyscall
+
+	OpAdd
+	OpSub
+	OpMul
+	OpDiv
+	OpMod
+	OpAnd
+	OpOr
+	OpNot
+	OpCmpEq
+	OpCmpNeq
+
+	OpClearReg
 )
 
 type VMInstr struct {
 	Op      VMOp
 	Oprand1 VMDataObject
 	Oprand2 VMDataObject
+	Oprand3 VMDataObject
 }
 
 type CallStack struct {
