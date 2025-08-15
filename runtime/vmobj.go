@@ -2,6 +2,50 @@ package runtime
 
 import "fmt"
 
+const (
+	INTGER ValueType = iota + 1
+	REAL
+	STRING
+	BOOLEAN
+)
+
+type VMDataObject struct {
+	Type ValueType
+
+	IntData    int64
+	FloatData  float64
+	BoolData   bool
+	StringData string
+}
+
+type VMFunctionObject struct {
+	JumpPc int
+}
+
+type VMArgumentRegisters struct {
+	ArgumentRegisters   []VMDataObject
+	ReturnValueRegister VMDataObject
+}
+
+func NewRegister() VMArgumentRegisters {
+	return VMArgumentRegisters{
+		ArgumentRegisters: make([]VMDataObject, 64),
+	}
+}
+
+func (rg *VMArgumentRegisters) ClearRegisters() {
+	rg.ArgumentRegisters = rg.ArgumentRegisters[:0]
+	rg.ArgumentRegisters = make([]VMDataObject, 64)
+}
+
+func (rg *VMArgumentRegisters) InsertRegister(idx int, val VMDataObject) {
+	rg.ArgumentRegisters[idx] = val
+}
+
+func (rg *VMArgumentRegisters) GetRegister(idx int) VMDataObject {
+	return rg.ArgumentRegisters[idx]
+}
+
 type VMMEMObjectTable struct {
 	ValueTable     map[string]int
 	DataMemory     []VMDataObject
@@ -74,4 +118,49 @@ func (v *VMMEMObjectTable) SetFunc(name string, fn VMFunctionObject) {
 		panic("VMFunctionObject not found: " + name)
 	}
 	v.FunctionMemory[idx] = fn
+}
+
+type VMOp int
+type ValueType int
+
+const (
+	OpRegSet VMOp = iota + 1
+	OpMemSet
+	OpRegMov
+	OpMemMov
+	OpLdr
+	OpStr
+
+	OpDefFunc
+	OpCall
+	OpReturn
+
+	OpSyscall
+)
+
+type VMInstr struct {
+	Op      VMOp
+	Oprand1 VMDataObject
+	Oprand2 VMDataObject
+}
+
+type CallStack struct {
+	stack []int
+}
+
+func NewCallStack() *CallStack {
+	return &CallStack{stack: make([]int, 0)}
+}
+
+func (cs *CallStack) Push(pc int) {
+	cs.stack = append(cs.stack, pc)
+}
+
+func (cs *CallStack) Pop() int {
+	if len(cs.stack) == 0 {
+		panic("CallStack underflow")
+	}
+	val := cs.stack[len(cs.stack)-1]
+	cs.stack = cs.stack[:len(cs.stack)-1]
+	return val
 }
