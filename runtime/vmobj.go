@@ -1,7 +1,5 @@
 package runtime
 
-import "fmt"
-
 const (
 	INTGER ValueType = iota + 1
 	REAL
@@ -113,7 +111,6 @@ func (v *VMMEMObjectTable) MakeFunc(name string) {
 }
 
 func (v *VMMEMObjectTable) GetFunc(name string) *VMFunctionObject {
-	fmt.Println("Getting function:", name)
 	idx, ok := v.ValueTable[name]
 	if !ok || idx >= len(v.FunctionMemory) {
 		panic("VMFunctionObject not found: " + name)

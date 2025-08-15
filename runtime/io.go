@@ -18,7 +18,6 @@ func NewIO() RuntimeIO {
 }
 
 func (io *RuntimeIO) WriteObjectToStream(data VMDataObject) {
-	fmt.Println("Writing to IO:", data)
 	switch data.Type {
 	case STRING:
 		io.buffer = append(io.buffer, data.StringData)
@@ -40,8 +39,7 @@ func (io *RuntimeIO) WriteObjectToStream(data VMDataObject) {
 }
 
 func (io *RuntimeIO) FlushIO() {
-	fmt.Println("Flushing ")
-	for elem := range io.buffer {
+	for _, elem := range io.buffer {
 		fmt.Print(elem)
 	}
 	io.buffer = io.buffer[:0]

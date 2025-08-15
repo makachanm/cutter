@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"fmt"
 	"strconv"
 )
 
@@ -54,13 +53,13 @@ func (vm *VM) Run() {
 	vm.PC = pc
 	for vm.PC < len(vm.Program) {
 		instr := vm.Program[vm.PC]
-		fmt.Println("Executing instruction:", instr)
+
 		switch instr.Op {
 		case OpCall:
 			funcName := instr.Oprand1.StringData
 			funcObj := vm.Mem.GetFunc(funcName)
 
-			vm.Stack.Push(vm.PC + 1)
+			vm.Stack.Push(vm.PC)
 			vm.PC = funcObj.JumpPc
 
 		case OpReturn:
