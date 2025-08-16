@@ -32,35 +32,31 @@ func NewVM(input []VMInstr) *VM {
 func (vm *VM) Run() {
 	vm.Mem.MakeObj("stdout")
 
-	pc := 0
-	for pc < len(vm.Program) {
-		instr := vm.Program[pc]
-		if instr.Op == OpDefFunc {
-			funcName := instr.Oprand1.StringData
-			funcObj := VMFunctionObject{
-				JumpPc: int(instr.Oprand2.IntData),
-			}
-			vm.Mem.MakeFunc(funcName)
-			vm.Mem.SetFunc(funcName, funcObj)
-		}
-		if instr.Op == OpReturn && vm.Program[pc+1].Op != OpDefFunc {
-			pc++
-			break
-		}
-		pc++
-	}
-
-	vm.PC = pc
+	vm.PC = 0
 	for vm.PC < len(vm.Program) {
 		instr := vm.Program[vm.PC]
 
 		switch instr.Op {
+		case OpDefFunc:
+			funcName := instr.Oprand1.StringData
+			funcObj := VMFunctionObject{
+				JumpPc: vm.PC + 1,
+			}
+			vm.Mem.MakeFunc(funcName)
+			vm.Mem.SetFunc(funcName, funcObj)
+
+			// Skip to the end of the function definition
+			for vm.PC < len(vm.Program) && vm.Program[vm.PC].Op != OpReturn {
+				vm.PC++
+			}
+
 		case OpCall:
 			funcName := instr.Oprand1.StringData
 			funcObj := vm.Mem.GetFunc(funcName)
 
 			vm.Stack.Push(vm.PC)
 			vm.PC = funcObj.JumpPc
+			continue
 
 		case OpReturn:
 			if len(vm.Stack.stack) == 0 {
