@@ -17,7 +17,9 @@ type VMDataObject struct {
 }
 
 type VMFunctionObject struct {
-	JumpPc int
+	JumpPc      int
+	IsStandard  bool
+	Instructions []VMInstr
 }
 
 type VMArgumentRegisters struct {

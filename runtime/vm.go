@@ -17,16 +17,26 @@ type VM struct {
 }
 
 func NewVM(input []VMInstr) *VM {
-	return &VM{
+	vm := &VM{
 		Stack:   NewCallStack(),
 		Program: input,
-		Reg:     NewRegister(),
-		Mem:     NewVMMEMObjTable(),
-		IO:      NewIO(),
-		PC:      0,
+		Reg:     NewRegister(), Mem: NewVMMEMObjTable(),
+		IO: NewIO(),
+		PC: 0,
 
 		isFuncDefineState: false,
 	}
+
+	// Register standard functions
+	for name, instrs := range StandardFuncs {
+		vm.Mem.MakeFunc(name)
+		vm.Mem.SetFunc(name, VMFunctionObject{
+			JumpPc:       -1, // Special value to indicate a standard function
+			IsStandard:   true,
+			Instructions: instrs,
+		})
+	}
+	return vm
 }
 
 func (vm *VM) Run() {
@@ -54,9 +64,21 @@ func (vm *VM) Run() {
 			funcName := instr.Oprand1.StringData
 			funcObj := vm.Mem.GetFunc(funcName)
 
-			vm.Stack.Push(vm.PC)
-			vm.PC = funcObj.JumpPc
-			continue
+			if funcObj.IsStandard {
+				// Execute standard function instructions
+				for _, stdInstr := range funcObj.Instructions {
+					vm.executeInstruction(stdInstr)
+				}
+				// After executing standard function, continue with the next instruction
+				// in the main program.
+				vm.PC++ // Move to the next instruction after the OpCall
+				continue
+			} else {
+				// Existing logic for user-defined functions
+				vm.Stack.Push(vm.PC)
+				vm.PC = funcObj.JumpPc
+				continue
+			}
 
 		case OpReturn:
 			if len(vm.Stack.stack) == 0 {
@@ -201,4 +223,85 @@ func performOperation(r1, r2 VMDataObject, floatOp func(float64, float64) float6
 		}
 	}
 	return VMDataObject{}
+}
+
+func (vm *VM) executeInstruction(instr VMInstr) {
+	switch instr.Op {
+	case OpRegSet:
+		vm.Reg.InsertRegister(int(instr.Oprand1.IntData), instr.Oprand2)
+	case OpMemSet:
+		if !vm.Mem.HasObj(instr.Oprand1.StringData) {
+			vm.Mem.MakeObj(instr.Oprand1.StringData)
+		}
+		vm.Mem.SetObj(instr.Oprand1.StringData, instr.Oprand2)
+	case OpRslSet:
+		vm.Reg.InsertResult(vm.Reg.GetRegister(int(instr.Oprand1.IntData)))
+	case OpRegMov:
+		value := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+		vm.Reg.InsertRegister(int(instr.Oprand2.IntData), value)
+	case OpMemMov:
+		value := vm.Mem.GetObj(instr.Oprand1.StringData)
+		vm.Mem.SetObj(instr.Oprand2.StringData, *value)
+	case OpRelMov:
+		value := vm.Reg.GetResult()
+		vm.Reg.InsertRegister(int(instr.Oprand1.IntData), value)
+	case OpLdr:
+		vm.Reg.InsertRegister(int(instr.Oprand1.IntData), *vm.Mem.GetObj(instr.Oprand2.StringData))
+	case OpStr:
+		vm.Mem.SetObj(instr.Oprand1.StringData, vm.Reg.GetRegister(int(instr.Oprand2.IntData)))
+	case OpSyscall:
+		doSyscall(vm, instr)
+	case OpAdd:
+		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
+		result := performOperation(r1, r2, func(a, b float64) float64 { return a + b }, func(a, b int64) int64 { return a + b }, func(a, b string) string { return a + b })
+		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
+	case OpSub:
+		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
+		result := performOperation(r1, r2, func(a, b float64) float64 { return a - b }, func(a, b int64) int64 { return a - b }, nil)
+		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
+	case OpMul:
+		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
+		result := performOperation(r1, r2, func(a, b float64) float64 { return a * b }, func(a, b int64) int64 { return a * b }, nil)
+		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
+	case OpDiv:
+		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
+		result := performOperation(r1, r2, func(a, b float64) float64 { return a / b }, func(a, b int64) int64 { return a / b }, nil)
+		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
+	case OpMod:
+		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
+		result := performOperation(r1, r2, nil, func(a, b int64) int64 { return a % b }, nil)
+		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
+	case OpAnd:
+		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
+		if r1.Type == BOOLEAN && r2.Type == BOOLEAN {
+			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), VMDataObject{Type: BOOLEAN, BoolData: r1.BoolData && r2.BoolData})
+		}
+	case OpOr:
+		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
+		if r1.Type == BOOLEAN && r2.Type == BOOLEAN {
+			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), VMDataObject{Type: BOOLEAN, BoolData: r1.BoolData || r2.BoolData})
+		}
+	case OpNot:
+		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+		if r1.Type == BOOLEAN {
+			vm.Reg.InsertRegister(int(instr.Oprand2.IntData), VMDataObject{Type: BOOLEAN, BoolData: !r1.BoolData})
+		}
+	case OpCmpEq:
+		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
+		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), VMDataObject{Type: BOOLEAN, BoolData: r1 == r2})
+	case OpCmpNeq:
+		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
+		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), VMDataObject{Type: BOOLEAN, BoolData: r1 != r2})
+	case OpClearReg:
+		vm.Reg.ClearRegisters()
+	}
 }
