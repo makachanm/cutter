@@ -85,6 +85,7 @@ func (vm *VM) Run() {
 				panic("Call stack is empty, cannot return.")
 			}
 			vm.PC = vm.Stack.Pop()
+			DumpRegisters(vm, 15)
 
 		case OpRegSet:
 			vm.Reg.InsertRegister(int(instr.Oprand1.IntData), instr.Oprand2)
@@ -106,7 +107,7 @@ func (vm *VM) Run() {
 		case OpRslSet:
 			vm.Reg.InsertResult(vm.Reg.GetRegister(int(instr.Oprand1.IntData)))
 
-		case OpRelMov:
+		case OpRslMov:
 			value := vm.Reg.GetResult()
 			vm.Reg.InsertRegister(int(instr.Oprand1.IntData), value)
 
@@ -179,8 +180,42 @@ func (vm *VM) Run() {
 			r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
 			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), VMDataObject{Type: BOOLEAN, BoolData: r1 != r2})
 
+		case OpBrch:
+			evaluation := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+			if evaluation.Type != BOOLEAN {
+				panic("Branch condition must be BOOLEAN type")
+			}
+
+			var funcObj *VMFunctionObject
+
+			if evaluation.BoolData {
+				funcObj = vm.Mem.GetFunc(instr.Oprand2.StringData)
+			} else {
+				funcObj = vm.Mem.GetFunc(instr.Oprand3.StringData)
+			}
+
+			if funcObj.IsStandard {
+				// Execute standard function instructions
+				for _, stdInstr := range funcObj.Instructions {
+					vm.executeInstruction(stdInstr)
+				}
+				// After executing standard function, continue with the next instruction
+				// in the main program.
+				vm.PC++ // Move to the next instruction after the OpCall
+				continue
+			} else {
+				// Existing logic for user-defined functions
+				vm.Stack.Push(vm.PC)
+				vm.PC = funcObj.JumpPc
+				continue
+			}
+
 		case OpClearReg:
 			vm.Reg.ClearRegisters()
+
+		case OpHlt:
+			// Stop execution
+			return
 		}
 		vm.PC++
 	}
@@ -238,7 +273,7 @@ func (vm *VM) executeInstruction(instr VMInstr) {
 	case OpMemMov:
 		value := vm.Mem.GetObj(instr.Oprand1.StringData)
 		vm.Mem.SetObj(instr.Oprand2.StringData, *value)
-	case OpRelMov:
+	case OpRslMov:
 		value := vm.Reg.GetResult()
 		vm.Reg.InsertRegister(int(instr.Oprand1.IntData), value)
 	case OpLdr:

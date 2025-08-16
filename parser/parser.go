@@ -108,7 +108,6 @@ func (p *Parser) doCallParse() CallObject {
 			} else {
 				p.targets.Pushback()
 				subcall := p.doCallParse()
-				fmt.Println(subcall)
 
 				call.CallableArgs = append(call.CallableArgs, subcall)
 			}

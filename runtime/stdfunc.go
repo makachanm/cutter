@@ -43,6 +43,10 @@ func init() {
 	// String Functions
 	StandardFuncs["strcontact"] = StandardFuncs["add"]
 
+	StandardFuncs["ifel"] = []VMInstr{
+		{Op: OpBrch, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: makeIntValueObj(2)}, // Branch if condition is true
+	}
+
 	// VM Internal Functions
 	StandardFuncs["setreg"] = []VMInstr{
 		{Op: OpRegSet, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1)},
@@ -55,6 +59,11 @@ func init() {
 	}
 	StandardFuncs["getmem"] = []VMInstr{
 		{Op: OpLdr, Oprand1: makeIntValueObj(0), Oprand2: makeStrValueObj("")}, // Note: This is not fully functional as the memory location is static.
+	}
+
+	StandardFuncs["exit"] = []VMInstr{
+		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_IO_FLUSH)},
+		{Op: OpHlt}, // Stop execution
 	}
 
 	// Functions that cannot be implemented with the current instruction set:

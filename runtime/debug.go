@@ -4,6 +4,17 @@ import (
 	"fmt"
 )
 
+func DumpRegisters(vm *VM, len int) {
+	for i, reg := range vm.Reg.ArgumentRegisters {
+		if i >= len {
+			break
+		}
+
+		fmt.Printf("R%d: %s ", i, formatVMDataObject(reg))
+	}
+	fmt.Println("\nValue Register: ", formatVMDataObject(vm.Reg.ReturnValueRegister))
+}
+
 func ResolveVMInstruction(instr VMInstr) string {
 	opCode := ""
 	switch instr.Op {
@@ -17,8 +28,8 @@ func ResolveVMInstruction(instr VMInstr) string {
 		opCode = "OpRegMov"
 	case OpMemMov:
 		opCode = "OpMemMov"
-	case OpRelMov:
-		opCode = "OpRelMov"
+	case OpRslMov:
+		opCode = "OpRslMov"
 	case OpLdr:
 		opCode = "OpLdr"
 	case OpStr:

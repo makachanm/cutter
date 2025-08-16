@@ -91,7 +91,7 @@ func (c *Compiler) CompileFunctionDefToVMInstr(fnc parser.FunctionObject) []VMIn
 			// The result of the nested call is in the result register.
 			// Move it to a temporary register and then set it as the function's return value.
 			tmpReg := c.reg.alloc()
-			instructions = append(instructions, VMInstr{Op: OpRelMov, Oprand1: makeIntValueObj(int64(tmpReg))})
+			instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(tmpReg))})
 			instructions = append(instructions, VMInstr{Op: OpRslSet, Oprand1: makeIntValueObj(int64(tmpReg))})
 		}
 	}
@@ -115,11 +115,11 @@ func (c *Compiler) CompileFunctionCallToVMInstr(call parser.CallObject) []VMInst
 		tmpReg := c.reg.alloc()
 		instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(tmpReg)), Oprand2: makeStrValueObj(call.Name)})
 		instructions = append(instructions, VMInstr{Op: OpRslSet, Oprand1: makeIntValueObj(int64(tmpReg))}) // Set result for this "variable lookup"
-		return instructions                                                                                 // Return instructions for loading the variable
+
+		return instructions // Return instructions for loading the variable
 	}
 
-	funcInfo, ok := c.funcInfo[call.Name]
-	if !ok { // This block handles standard library functions
+	if isStandard { // This block handles standard library functions
 		// Check if it's a known standard function
 		if _, isStandard := c.standardFuncs[call.Name]; isStandard {
 			// Load arguments into registers for standard function execution
@@ -137,15 +137,19 @@ func (c *Compiler) CompileFunctionCallToVMInstr(call parser.CallObject) []VMInst
 				instructions = append(instructions, nestedCallInstructions...)
 				// The result of the nested call is in the result register.
 				// Move it to the expected argument register for the standard function.
+
 				tmpReg := c.reg.alloc()
-				instructions = append(instructions, VMInstr{Op: OpRelMov, Oprand1: makeIntValueObj(int64(tmpReg))})
+				instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(tmpReg))})
 				instructions = append(instructions, VMInstr{Op: OpRegMov, Oprand1: makeIntValueObj(int64(tmpReg)), Oprand2: makeIntValueObj(int64(len(call.Args) + i))})
 			}
 		} else {
 			// Error: Function not found (neither user-defined nor standard)
 			panic(fmt.Sprintf("Function not found: %s", call.Name))
 		}
+
 	} else {
+		funcInfo := c.funcInfo[call.Name]
+
 		// Create and populate memory slots for parameters (existing logic for user-defined functions)
 		for i, arg := range call.Args {
 			if i < len(funcInfo.Args)-1 {
@@ -176,12 +180,14 @@ func (c *Compiler) CompileFunctionCallToVMInstr(call parser.CallObject) []VMInst
 					instructions = append(instructions, nestedCallInstructions...)
 					// The result of the nested call is in the result register.
 					// Move it to a temporary register and then store it in memory.
+
 					tmpReg := c.reg.alloc()
-					instructions = append(instructions, VMInstr{Op: OpRelMov, Oprand1: makeIntValueObj(int64(tmpReg))})
+					instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(tmpReg))})
 					instructions = append(instructions, VMInstr{Op: OpStr, Oprand1: makeStrValueObj(paramName), Oprand2: makeIntValueObj(int64(tmpReg))})
 				}
 			}
 		}
+
 	}
 
 	// Perform the call
@@ -189,7 +195,7 @@ func (c *Compiler) CompileFunctionCallToVMInstr(call parser.CallObject) []VMInst
 
 	// Move result from result register to a general-purpose register
 	tmpReg := c.reg.alloc()
-	instructions = append(instructions, VMInstr{Op: OpRelMov, Oprand1: makeIntValueObj(int64(tmpReg))})
+	instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(tmpReg))})
 
 	c.last_pos += len(instructions)
 	return instructions

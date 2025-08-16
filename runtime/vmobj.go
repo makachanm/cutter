@@ -17,8 +17,8 @@ type VMDataObject struct {
 }
 
 type VMFunctionObject struct {
-	JumpPc      int
-	IsStandard  bool
+	JumpPc       int
+	IsStandard   bool
 	Instructions []VMInstr
 }
 
@@ -29,14 +29,14 @@ type VMArgumentRegisters struct {
 
 func NewRegister() VMArgumentRegisters {
 	return VMArgumentRegisters{
-		ArgumentRegisters:   make([]VMDataObject, 64),
+		ArgumentRegisters:   make([]VMDataObject, 1024),
 		ReturnValueRegister: VMDataObject{},
 	}
 }
 
 func (rg *VMArgumentRegisters) ClearRegisters() {
 	rg.ArgumentRegisters = rg.ArgumentRegisters[:0]
-	rg.ArgumentRegisters = make([]VMDataObject, 64)
+	rg.ArgumentRegisters = make([]VMDataObject, 1024)
 }
 
 func (rg *VMArgumentRegisters) InsertRegister(idx int, val VMDataObject) {
@@ -137,7 +137,7 @@ const (
 	OpRslSet
 	OpRegMov
 	OpMemMov
-	OpRelMov
+	OpRslMov
 	OpLdr
 	OpStr
 
@@ -158,7 +158,10 @@ const (
 	OpCmpEq
 	OpCmpNeq
 
+	OpBrch
+
 	OpClearReg
+	OpHlt
 )
 
 type VMInstr struct {
