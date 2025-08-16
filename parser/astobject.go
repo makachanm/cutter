@@ -19,7 +19,8 @@ type FunctionObject struct {
 	Name string
 	Type FunctionType
 
-	Args []CallObject
+	Args       []CallObject
+	StaticData ValueObject
 }
 
 type CallObject struct {

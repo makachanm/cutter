@@ -84,7 +84,7 @@ func (v *VMMEMObjectTable) MakeObj(name string) {
 
 func (v *VMMEMObjectTable) GetObj(name string) *VMDataObject {
 	idx, ok := v.ValueTable[name]
-	if !ok || idx >= len(v.DataMemory) {
+	if !ok {
 		panic("VMDataObject not found: " + name)
 	}
 	return &v.DataMemory[idx]
@@ -92,7 +92,7 @@ func (v *VMMEMObjectTable) GetObj(name string) *VMDataObject {
 
 func (v *VMMEMObjectTable) SetObj(name string, data VMDataObject) {
 	idx, ok := v.ValueTable[name]
-	if !ok || idx >= len(v.DataMemory) {
+	if !ok {
 		panic("VMDataObject not found: " + name)
 	}
 	v.DataMemory[idx] = data
@@ -140,6 +140,7 @@ const (
 	OpRslMov
 	OpLdr
 	OpStr
+	OpRslStr
 
 	OpDefFunc
 	OpCall

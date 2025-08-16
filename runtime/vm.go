@@ -45,6 +45,7 @@ func (vm *VM) Run() {
 	vm.PC = 0
 	for vm.PC < len(vm.Program) {
 		instr := vm.Program[vm.PC]
+		//fmt.Printf("Executing instruction at PC=%d: %s\n", vm.PC, ResolveVMInstruction(instr))
 
 		switch instr.Op {
 		case OpDefFunc:
@@ -85,7 +86,6 @@ func (vm *VM) Run() {
 				panic("Call stack is empty, cannot return.")
 			}
 			vm.PC = vm.Stack.Pop()
-			DumpRegisters(vm, 15)
 
 		case OpRegSet:
 			vm.Reg.InsertRegister(int(instr.Oprand1.IntData), instr.Oprand2)
@@ -116,6 +116,9 @@ func (vm *VM) Run() {
 
 		case OpStr:
 			vm.Mem.SetObj(instr.Oprand1.StringData, vm.Reg.GetRegister(int(instr.Oprand2.IntData)))
+
+		case OpRslStr:
+			vm.Mem.SetObj(instr.Oprand1.StringData, vm.Reg.GetResult())
 
 		case OpSyscall:
 			doSyscall(vm, instr)

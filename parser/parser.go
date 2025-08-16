@@ -143,6 +143,15 @@ func (p *Parser) doDefineParse() FunctionObject {
 				p.targets.Pushback()
 				fun.Args = append(fun.Args, p.doCallParse())
 			}
+
+		case lexer.DATA_INT:
+			fun.StaticData = makeIntValueObj(object.Data.IntData)
+		case lexer.DATA_REAL:
+			fun.StaticData = makeRealValueObj(object.Data.RealData)
+		case lexer.DATA_STR:
+			fun.StaticData = makeStrValueObj(object.Data.StrData)
+		case lexer.DATA_BOOL:
+			fun.StaticData = makeBoolValueObj(object.Data.BoolData)
 		}
 	}
 
