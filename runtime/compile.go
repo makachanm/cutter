@@ -30,12 +30,6 @@ func (r *regAlloc) reset() {
 	r.next = 0
 }
 
-func (r *regAlloc) tmpVar() string {
-	name := fmt.Sprintf("_tmp%d", r.next)
-	r.next++
-	return name
-}
-
 func (c *Compiler) CompileASTToVMInstr(input parser.HeadNode) []VMInstr {
 	instructions := make([]VMInstr, 0)
 	c.reg.next = 0
