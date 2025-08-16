@@ -195,8 +195,7 @@ func performOperation(r1, r2 VMDataObject, floatOp func(float64, float64) float6
 		case REAL:
 			return VMDataObject{Type: REAL, FloatData: floatOp(float64(r1.IntData), r2.FloatData)}
 		case STRING:
-			i, _ := strconv.ParseInt(r2.StringData, 10, 64)
-			return VMDataObject{Type: INTGER, IntData: intOp(r1.IntData, i)}
+			return VMDataObject{Type: STRING, StringData: strOp(strconv.FormatInt(r1.IntData, 10), r2.StringData)}
 		}
 	case REAL:
 		switch r2.Type {
@@ -205,17 +204,14 @@ func performOperation(r1, r2 VMDataObject, floatOp func(float64, float64) float6
 		case REAL:
 			return VMDataObject{Type: REAL, FloatData: floatOp(r1.FloatData, r2.FloatData)}
 		case STRING:
-			f, _ := strconv.ParseFloat(r2.StringData, 64)
-			return VMDataObject{Type: REAL, FloatData: floatOp(r1.FloatData, f)}
+			return VMDataObject{Type: STRING, StringData: strOp(strconv.FormatFloat(r1.FloatData, 'f', -1, 64), r2.StringData)}
 		}
 	case STRING:
 		switch r2.Type {
 		case INTGER:
-			i, _ := strconv.ParseInt(r1.StringData, 10, 64)
-			return VMDataObject{Type: INTGER, IntData: intOp(i, r2.IntData)}
+			return VMDataObject{Type: STRING, StringData: strOp(r1.StringData, strconv.FormatInt(r2.IntData, 10))}
 		case REAL:
-			f, _ := strconv.ParseFloat(r1.StringData, 64)
-			return VMDataObject{Type: REAL, FloatData: floatOp(f, r2.FloatData)}
+			return VMDataObject{Type: STRING, StringData: strOp(r1.StringData, strconv.FormatFloat(r2.FloatData, 'f', -1, 64))}
 		case STRING:
 			if strOp != nil {
 				return VMDataObject{Type: STRING, StringData: strOp(r1.StringData, r2.StringData)}

@@ -26,6 +26,10 @@ func (r *regAlloc) alloc() int {
 	return idx
 }
 
+func (r *regAlloc) reset() {
+	r.next = 0
+}
+
 func (r *regAlloc) tmpVar() string {
 	name := fmt.Sprintf("_tmp%d", r.next)
 	r.next++
@@ -55,11 +59,15 @@ func (c *Compiler) CompileASTToVMInstr(input parser.HeadNode) []VMInstr {
 			resultReg := c.reg.next - 1 // The result is in the last allocated register
 			instructions = append(instructions, VMInstr{Op: OpStr, Oprand1: makeStrValueObj("stdout"), Oprand2: makeIntValueObj(int64(resultReg))})
 			instructions = append(instructions, VMInstr{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_IO_FLUSH)})
+			c.reg.reset()
+			instructions = append(instructions, VMInstr{Op: OpClearReg})
 		case parser.NORM_STRINGS:
 			tmpReg := c.reg.alloc()
 			instructions = append(instructions, VMInstr{Op: OpRegSet, Oprand1: makeIntValueObj(int64(tmpReg)), Oprand2: makeStrValueObj(items.Norm.Data)})
 			instructions = append(instructions, VMInstr{Op: OpStr, Oprand1: makeStrValueObj("stdout"), Oprand2: makeIntValueObj(int64(tmpReg))})
 			instructions = append(instructions, VMInstr{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_IO_FLUSH)})
+			c.reg.reset()
+			instructions = append(instructions, VMInstr{Op: OpClearReg})
 		}
 	}
 	return instructions
