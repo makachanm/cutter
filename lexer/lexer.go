@@ -11,12 +11,19 @@ type Lexer struct {
 
 	buffer  []string
 	results []LexerToken
+
+	inDefine           bool
+	defineBracketLevel int
+	ignoreNextNewline  bool
 }
 
 func NewLexer() *Lexer {
 	lex := new(Lexer)
 	lex.state = STATE_NORMSTRINGS
 	lex.results = make([]LexerToken, 0)
+	lex.inDefine = false
+	lex.defineBracketLevel = 0
+	lex.ignoreNextNewline = false
 
 	return lex
 }
@@ -29,6 +36,10 @@ func (l *Lexer) DoLex(input string) []LexerToken {
 
 	for !l.queue.IsEmpty() {
 		symbol := l.queue.Pop()
+
+		if l.ignoreNextNewline && symbol.GetType() != NEWLINE {
+			l.ignoreNextNewline = false
+		}
 
 		switch symbol.GetType() {
 		case KEYWORD_CALL:
@@ -47,11 +58,15 @@ func (l *Lexer) DoLex(input string) []LexerToken {
 			}
 			l.flushBuffer()
 			l.results = append(l.results, NewLexerToken(symbol.token_type, NewData()))
+			l.inDefine = true
 
 		case KEYWORD_BRACKET_OPEN:
 			if l.state == STATE_STRINGVALUE {
 				l.buffer = append(l.buffer, InvertedKeywordMap[symbol.token_type])
 				continue
+			}
+			if l.inDefine {
+				l.defineBracketLevel++
 			}
 			l.results = append(l.results, NewLexerToken(symbol.token_type, NewData()))
 			l.state = STATE_OBJNAME
@@ -63,6 +78,13 @@ func (l *Lexer) DoLex(input string) []LexerToken {
 			}
 			l.results = append(l.results, NewLexerToken(symbol.token_type, NewData()))
 			l.state = STATE_NORMSTRINGS
+			if l.inDefine {
+				l.defineBracketLevel--
+				if l.defineBracketLevel == 0 {
+					l.inDefine = false // End of define block
+					l.ignoreNextNewline = true
+				}
+			}
 
 		case STRING_QUOTEMARK:
 			if l.state != STATE_STRINGVALUE {
@@ -90,10 +112,15 @@ func (l *Lexer) DoLex(input string) []LexerToken {
 			l.results = append(l.results, NewLexerToken(VALUE, NewBoolData(data)))
 
 		case WHITESPACE, NEWLINE:
+			if l.ignoreNextNewline && symbol.GetType() == NEWLINE {
+				l.ignoreNextNewline = false
+				continue
+			}
 			if l.state == STATE_STRINGVALUE || l.state == STATE_NORMSTRINGS {
 				l.buffer = append(l.buffer, InvertedKeywordMap[symbol.token_type])
 				continue
 			}
+
 			l.flushBuffer()
 
 		case NORM_STRINGS:

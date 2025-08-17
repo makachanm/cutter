@@ -47,10 +47,9 @@ func (io *RuntimeIO) WriteObjectToStream(data VMDataObject) {
 
 		io.buffer = append(io.buffer, d)
 	}
-	// Removed io.FlushIO() from here. FlushIO will be called explicitly by syscall.
+
 }
 
-// FlushIO writes the buffered content to the configured writer and clears the buffer.
 func (io *RuntimeIO) FlushIO() {
 	if io.writer != nil {
 		for _, elem := range io.buffer {
@@ -60,8 +59,6 @@ func (io *RuntimeIO) FlushIO() {
 	io.buffer = io.buffer[:0] // Clear the buffer
 }
 
-// ReadBuffer returns the current content of the buffer without clearing it.
-// This is primarily for testing purposes to inspect the buffer before it's flushed.
 func (io *RuntimeIO) ReadBuffer() string {
 	return strings.Join(io.buffer, "")
 }

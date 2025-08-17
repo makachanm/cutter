@@ -34,6 +34,8 @@ func ResolveVMInstruction(instr VMInstr) string {
 		opCode = "OpLdr"
 	case OpStr:
 		opCode = "OpStr"
+	case OpRslStr:
+		opCode = "OpRslStr"
 	case OpDefFunc:
 		opCode = "OpDefFunc"
 	case OpCall:
@@ -62,8 +64,12 @@ func ResolveVMInstruction(instr VMInstr) string {
 		opCode = "OpCmpEq"
 	case OpCmpNeq:
 		opCode = "OpCmpNeq"
+	case OpBrch:
+		opCode = "OpBrch"
 	case OpClearReg:
 		opCode = "OpClearReg"
+	case OpHlt:
+		opCode = "OpHlt"
 	default:
 		opCode = fmt.Sprintf("UnknownOp(%d)", instr.Op)
 	}

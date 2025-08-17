@@ -140,6 +140,7 @@ const (
 	OpRslMov
 	OpLdr
 	OpStr
+	OpStrInd
 	OpRslStr
 
 	OpDefFunc

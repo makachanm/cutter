@@ -27,6 +27,7 @@ type CallObject struct {
 	Name         string
 	Args         []ValueObject
 	CallableArgs []CallObject
+	VarArgNames  []string
 }
 
 type ValueObject struct {

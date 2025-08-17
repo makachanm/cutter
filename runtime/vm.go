@@ -28,7 +28,7 @@ func NewVM(input []VMInstr) *VM {
 	}
 
 	// Register standard functions
-	for name, instrs := range StandardFuncs {
+	for name, instrs := range GetStandardFuncs() {
 		vm.Mem.MakeFunc(name)
 		vm.Mem.SetFunc(name, VMFunctionObject{
 			JumpPc:       -1, // Special value to indicate a standard function
@@ -45,7 +45,6 @@ func (vm *VM) Run() {
 	vm.PC = 0
 	for vm.PC < len(vm.Program) {
 		instr := vm.Program[vm.PC]
-		//fmt.Printf("Executing instruction at PC=%d: %s\n", vm.PC, ResolveVMInstruction(instr))
 
 		switch instr.Op {
 		case OpDefFunc:
@@ -115,7 +114,22 @@ func (vm *VM) Run() {
 			vm.Reg.InsertRegister(int(instr.Oprand1.IntData), *vm.Mem.GetObj(instr.Oprand2.StringData))
 
 		case OpStr:
+			if !vm.Mem.HasObj(instr.Oprand1.StringData) {
+				vm.Mem.MakeObj(instr.Oprand1.StringData)
+			}
 			vm.Mem.SetObj(instr.Oprand1.StringData, vm.Reg.GetRegister(int(instr.Oprand2.IntData)))
+
+		case OpStrInd:
+			nameReg := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+			if nameReg.Type != STRING {
+				panic("Variable name for OpStrInd must be a string")
+			}
+			name := nameReg.StringData
+			value := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
+			if !vm.Mem.HasObj(name) {
+				vm.Mem.MakeObj(name)
+			}
+			vm.Mem.SetObj(name, value)
 
 		case OpRslStr:
 			vm.Mem.SetObj(instr.Oprand1.StringData, vm.Reg.GetResult())
@@ -184,33 +198,15 @@ func (vm *VM) Run() {
 			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), VMDataObject{Type: BOOLEAN, BoolData: r1 != r2})
 
 		case OpBrch:
-			evaluation := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
-			if evaluation.Type != BOOLEAN {
+			condition := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+			if condition.Type != BOOLEAN {
 				panic("Branch condition must be BOOLEAN type")
 			}
 
-			var funcObj *VMFunctionObject
-
-			if evaluation.BoolData {
-				funcObj = vm.Mem.GetFunc(instr.Oprand2.StringData)
+			if condition.BoolData {
+				vm.Reg.InsertResult(vm.Reg.GetRegister(int(instr.Oprand2.IntData)))
 			} else {
-				funcObj = vm.Mem.GetFunc(instr.Oprand3.StringData)
-			}
-
-			if funcObj.IsStandard {
-				// Execute standard function instructions
-				for _, stdInstr := range funcObj.Instructions {
-					vm.executeInstruction(stdInstr)
-				}
-				// After executing standard function, continue with the next instruction
-				// in the main program.
-				vm.PC++ // Move to the next instruction after the OpCall
-				continue
-			} else {
-				// Existing logic for user-defined functions
-				vm.Stack.Push(vm.PC)
-				vm.PC = funcObj.JumpPc
-				continue
+				vm.Reg.InsertResult(vm.Reg.GetRegister(int(instr.Oprand3.IntData)))
 			}
 
 		case OpClearReg:
@@ -282,6 +278,9 @@ func (vm *VM) executeInstruction(instr VMInstr) {
 	case OpLdr:
 		vm.Reg.InsertRegister(int(instr.Oprand1.IntData), *vm.Mem.GetObj(instr.Oprand2.StringData))
 	case OpStr:
+		if !vm.Mem.HasObj(instr.Oprand1.StringData) {
+			vm.Mem.MakeObj(instr.Oprand1.StringData)
+		}
 		vm.Mem.SetObj(instr.Oprand1.StringData, vm.Reg.GetRegister(int(instr.Oprand2.IntData)))
 	case OpSyscall:
 		doSyscall(vm, instr)
