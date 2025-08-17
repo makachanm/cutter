@@ -14,7 +14,7 @@ Object는 호출 시 인자를 가질 수 있다.
 ```
 @define(foo fizz buzz sum(fizz ` ` buzz))
 
-@foo(`Hello World`, `from Cutter!`)
+@foo(`Hello World` `from Cutter!`)
 > Hello World from Cutter!
 ``` 
 
