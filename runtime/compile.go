@@ -144,12 +144,41 @@ func (c *Compiler) CompileFunctionCallToVMInstr(call parser.CallObject) []VMInst
 	if _, isStandard := c.standardFuncs[call.Name]; isStandard {
 		// For standard functions, arguments are passed in registers.
 		// We need to evaluate all arguments and put them in registers.
-		for i, arg := range call.Arguments {
+		// Arguments are evaluated from right to left to handle nested calls correctly.
+		for i := len(call.Arguments) - 1; i >= 0; i-- {
+			arg := call.Arguments[i]
+
+			// Special handling for 'set' function's first argument
+			if call.Name == "set" && i == 0 {
+				// The first argument to 'set' is always a function name (string), not to be evaluated.
+				// We expect it to be an ARG_VARIABLE.
+				if arg.Type == parser.ARG_VARIABLE {
+					instructions = append(instructions, VMInstr{Op: OpRegSet, Oprand1: makeIntValueObj(int64(argRegs[0])), Oprand2: makeStrValueObj(arg.VarName)})
+					continue // Skip to the next argument
+				} else {
+					panic("Compiler error: First argument to 'set' must be a function name.")
+				}
+			}
+
 			switch arg.Type {
 			case parser.ARG_LITERAL:
 				instructions = append(instructions, VMInstr{Op: OpRegSet, Oprand1: makeIntValueObj(int64(argRegs[i])), Oprand2: transformToVMDataObject(arg.Literal)})
 			case parser.ARG_VARIABLE:
-				instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(argRegs[i])), Oprand2: makeStrValueObj(arg.VarName)})
+				// Check if the variable name is actually a function name
+				if _, isUserFunc := c.funcInfo[arg.VarName]; isUserFunc {
+					// It's a user-defined function. We need to CALL it and use the result.
+					// This is a zero-argument call.
+					callObj := parser.CallObject{Name: arg.VarName, Arguments: []parser.Argument{}}
+					nestedCallInstructions := c.CompileFunctionCallToVMInstr(callObj)
+					instructions = append(instructions, nestedCallInstructions...)
+					instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(argRegs[i]))})
+				} else if _, isStdFunc := c.standardFuncs[arg.VarName]; isStdFunc {
+					// If it's a standard function, pass its name as a string literal
+					instructions = append(instructions, VMInstr{Op: OpRegSet, Oprand1: makeIntValueObj(int64(argRegs[i])), Oprand2: makeStrValueObj(arg.VarName)})
+				} else {
+					// Otherwise, it's a regular variable, load its value
+					instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(argRegs[i])), Oprand2: makeStrValueObj(arg.VarName)})
+				}
 			case parser.ARG_CALLABLE:
 				nestedCallInstructions := c.CompileFunctionCallToVMInstr(arg.Callable)
 				instructions = append(instructions, nestedCallInstructions...)

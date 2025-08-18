@@ -119,20 +119,17 @@ func (vm *VM) Run() {
 			}
 			vm.Mem.SetObj(instr.Oprand1.StringData, vm.Reg.GetRegister(int(instr.Oprand2.IntData)))
 
-		case OpStrInd:
-			nameReg := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
-			if nameReg.Type != STRING {
-				panic("Variable name for OpStrInd must be a string")
-			}
-			name := nameReg.StringData
-			value := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-			if !vm.Mem.HasObj(name) {
-				vm.Mem.MakeObj(name)
-			}
-			vm.Mem.SetObj(name, value)
-
 		case OpRslStr:
 			vm.Mem.SetObj(instr.Oprand1.StringData, vm.Reg.GetResult())
+
+		case OpStrReg:
+			targetData := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+			fromData := vm.Mem.GetObj(vm.Reg.GetRegister(int(instr.Oprand2.IntData)).StringData)
+
+			if !vm.Mem.HasObj(targetData.StringData) {
+				vm.Mem.MakeObj(targetData.StringData)
+			}
+			vm.Mem.SetObj(targetData.StringData, *fromData)
 
 		case OpSyscall:
 			doSyscall(vm, instr)

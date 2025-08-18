@@ -6,36 +6,40 @@ package runtime
 func GetStandardFuncs() map[string][]VMInstr {
 	StandardFuncs := make(map[string][]VMInstr)
 
+	// Use register 15 as a dedicated temporary register for standard functions
+	// to avoid clobbering argument registers (0 and 1).
+	tempReg := makeIntValueObj(1023)
+
 	// Arithmetic Functions
 	StandardFuncs["add"] = []VMInstr{
-		{Op: OpAdd, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: makeIntValueObj(0)},
-		{Op: OpRslSet, Oprand1: makeIntValueObj(0)},
+		{Op: OpAdd, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: tempReg},
+		{Op: OpRslSet, Oprand1: tempReg},
 	}
 	StandardFuncs["sub"] = []VMInstr{
-		{Op: OpSub, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: makeIntValueObj(0)},
-		{Op: OpRslSet, Oprand1: makeIntValueObj(0)},
+		{Op: OpSub, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: tempReg},
+		{Op: OpRslSet, Oprand1: tempReg},
 	}
 	StandardFuncs["mul"] = []VMInstr{
-		{Op: OpMul, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: makeIntValueObj(0)},
-		{Op: OpRslSet, Oprand1: makeIntValueObj(0)},
+		{Op: OpMul, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: tempReg},
+		{Op: OpRslSet, Oprand1: tempReg},
 	}
 	StandardFuncs["div"] = []VMInstr{
-		{Op: OpDiv, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: makeIntValueObj(0)},
-		{Op: OpRslSet, Oprand1: makeIntValueObj(0)},
+		{Op: OpDiv, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: tempReg},
+		{Op: OpRslSet, Oprand1: tempReg},
 	}
 	StandardFuncs["mod"] = []VMInstr{
-		{Op: OpMod, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: makeIntValueObj(0)},
-		{Op: OpRslSet, Oprand1: makeIntValueObj(0)},
+		{Op: OpMod, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: tempReg},
+		{Op: OpRslSet, Oprand1: tempReg},
 	}
 
 	// Comparison Functions
 	StandardFuncs["same"] = []VMInstr{
-		{Op: OpCmpEq, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: makeIntValueObj(0)},
-		{Op: OpRslSet, Oprand1: makeIntValueObj(0)},
+		{Op: OpCmpEq, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: tempReg},
+		{Op: OpRslSet, Oprand1: tempReg},
 	}
 	StandardFuncs["notsame"] = []VMInstr{
-		{Op: OpCmpNeq, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: makeIntValueObj(0)},
-		{Op: OpRslSet, Oprand1: makeIntValueObj(0)},
+		{Op: OpCmpNeq, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: tempReg},
+		{Op: OpRslSet, Oprand1: tempReg},
 	}
 
 	// String Functions
@@ -49,7 +53,14 @@ func GetStandardFuncs() map[string][]VMInstr {
 
 	// Memory and Variable Manipulation
 	StandardFuncs["set"] = []VMInstr{
-		{Op: OpStrInd, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1)},
+		// Arguments are expected to be in registers 0 and 1
+		// Reg 0: function name (string)
+		// Reg 1: value to return (VMDataObject)
+
+		// Call the syscall to set the function's return value
+		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_SET_FUNC_RETURN)},
+		// The syscall itself sets the result of the 'set' operation (true for success)
+		// So, no need for OpRslSet here, as the syscall already handles it.
 	}
 
 	// System Functions
