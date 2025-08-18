@@ -1,10 +1,18 @@
 package etc
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 )
 
 func ReadFile(filePath string) (string, error) {
+	extension := filepath.Ext(filePath)
+	if extension != ".cm" {
+		fmt.Println("not a Cutter(.cm) file: " + filePath)
+		os.Exit(0)
+	}
+
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", err

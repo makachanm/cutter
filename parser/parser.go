@@ -75,6 +75,7 @@ func (p *Parser) DoParse(tokens []lexer.LexerToken) HeadNode {
 
 func (p *Parser) doCallParse() CallObject {
 	var call CallObject = CallObject{}
+	call.Arguments = make([]Argument, 0)
 
 	object := p.validCheckPop(lexer.VALUE)
 	if object.Data.Type != lexer.DATA_OBJNAME {
@@ -91,25 +92,25 @@ func (p *Parser) doCallParse() CallObject {
 
 		switch object.Data.Type {
 		case lexer.DATA_INT:
-			call.Args = append(call.Args, makeIntValueObj(object.Data.IntData))
+			call.Arguments = append(call.Arguments, Argument{Type: ARG_LITERAL, Literal: makeIntValueObj(object.Data.IntData)})
 		case lexer.DATA_REAL:
-			call.Args = append(call.Args, makeRealValueObj(object.Data.RealData))
+			call.Arguments = append(call.Arguments, Argument{Type: ARG_LITERAL, Literal: makeRealValueObj(object.Data.RealData)})
 		case lexer.DATA_STR:
-			call.Args = append(call.Args, makeStrValueObj(object.Data.StrData))
+			call.Arguments = append(call.Arguments, Argument{Type: ARG_LITERAL, Literal: makeStrValueObj(object.Data.StrData)})
 		case lexer.DATA_BOOL:
-			call.Args = append(call.Args, makeBoolValueObj(object.Data.BoolData))
+			call.Arguments = append(call.Arguments, Argument{Type: ARG_LITERAL, Literal: makeBoolValueObj(object.Data.BoolData)})
 
 		case lexer.DATA_OBJNAME:
 			next, _ := p.targets.Pop()
 			p.targets.Pushback()
 
 			if next.Type != lexer.KEYWORD_BRACKET_OPEN {
-				call.VarArgNames = append(call.VarArgNames, object.Data.ObjNameData)
+				call.Arguments = append(call.Arguments, Argument{Type: ARG_VARIABLE, VarName: object.Data.ObjNameData})
 			} else {
 				p.targets.Pushback()
 				subcall := p.doCallParse()
 
-				call.CallableArgs = append(call.CallableArgs, subcall)
+				call.Arguments = append(call.Arguments, Argument{Type: ARG_CALLABLE, Callable: subcall})
 			}
 
 		}

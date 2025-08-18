@@ -81,7 +81,7 @@ func (c *Compiler) CompileFunctionDefToVMInstr(fnc parser.FunctionObject) []VMIn
 	}
 
 	instructions := make([]VMInstr, 0)
-	c.reg.reset()
+	//c.reg.reset()
 
 	// Define the function entry point
 	instructions = append(instructions, VMInstr{Op: OpDefFunc, Oprand1: makeStrValueObj(fnc.Name)})
@@ -106,12 +106,13 @@ func (c *Compiler) CompileFunctionDefToVMInstr(fnc parser.FunctionObject) []VMIn
 
 		// Check if the body is a simple variable
 		isSimpleVar := false
-		if len(body.Args) == 0 && len(body.CallableArgs) == 0 && len(body.VarArgNames) == 0 {
+		if len(body.Arguments) == 0 {
 			// It's a name with no arguments. Is it a variable?
 			// We can check if it's one of the arguments.
 			for i, name := range argNames {
 				if name == body.Name {
-					// It's a variable. Load it from the register and set as result.
+					// It's a variable. The value is already in register i.
+					// Set it as result.
 					instructions = append(instructions, VMInstr{Op: OpRslSet, Oprand1: makeIntValueObj(int64(i))})
 					isSimpleVar = true
 					break
@@ -133,53 +134,53 @@ func (c *Compiler) CompileFunctionDefToVMInstr(fnc parser.FunctionObject) []VMIn
 func (c *Compiler) CompileFunctionCallToVMInstr(call parser.CallObject) []VMInstr {
 	instructions := make([]VMInstr, 0)
 
+	// Allocate unique registers for all arguments
+	argRegs := make([]int, len(call.Arguments))
+	for i := range call.Arguments {
+		argRegs[i] = c.reg.alloc()
+	}
+
 	// Check if it's a standard function
 	if _, isStandard := c.standardFuncs[call.Name]; isStandard {
-		// Handle callable arguments first
-		for i, carg := range call.CallableArgs {
-			nestedCallInstructions := c.CompileFunctionCallToVMInstr(carg)
-			instructions = append(instructions, nestedCallInstructions...)
-			// Move result to the correct argument register
-			instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(len(call.Args) + i))})
+		// For standard functions, arguments are passed in registers.
+		// We need to evaluate all arguments and put them in registers.
+		for i, arg := range call.Arguments {
+			switch arg.Type {
+			case parser.ARG_LITERAL:
+				instructions = append(instructions, VMInstr{Op: OpRegSet, Oprand1: makeIntValueObj(int64(argRegs[i])), Oprand2: transformToVMDataObject(arg.Literal)})
+			case parser.ARG_VARIABLE:
+				instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(argRegs[i])), Oprand2: makeStrValueObj(arg.VarName)})
+			case parser.ARG_CALLABLE:
+				nestedCallInstructions := c.CompileFunctionCallToVMInstr(arg.Callable)
+				instructions = append(instructions, nestedCallInstructions...)
+				instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(argRegs[i]))})
+			}
 		}
-		// Handle literal arguments
-		for i, arg := range call.Args {
-			instructions = append(instructions, VMInstr{Op: OpRegSet, Oprand1: makeIntValueObj(int64(i)), Oprand2: transformToVMDataObject(arg)})
-		}
-		// Handle variable arguments
-		for i, varName := range call.VarArgNames {
-			// Load the variable from memory into a register
-			regIndex := len(call.Args) + len(call.CallableArgs) + i
-			instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(regIndex)), Oprand2: makeStrValueObj(varName)})
+		// For standard functions, arguments are passed in registers 0, 1, 2...
+		// We need to move the values from argRegs to registers 0, 1, 2...
+		for i := range call.Arguments {
+			instructions = append(instructions, VMInstr{Op: OpRegMov, Oprand1: makeIntValueObj(int64(argRegs[i])), Oprand2: makeIntValueObj(int64(i))})
 		}
 	} else { // User-defined function
+		// For user-defined functions, arguments are passed through memory.
 		userFunc, _ := c.funcInfo[call.Name]
-
-		for i, arg := range call.Args {
+		for i, arg := range call.Arguments {
 			sname := userFunc.Args[i].Name
-			instructions = append(instructions, VMInstr{Op: OpMemSet, Oprand1: makeStrValueObj(sname), Oprand2: transformToVMDataObject(arg)})
-		}
-
-		for i, varName := range call.VarArgNames {
-			argIndex := len(call.Args) + i
-			sname := userFunc.Args[argIndex].Name
-			regIndex := i // We can reuse registers for arguments
-			instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(regIndex)), Oprand2: makeStrValueObj(varName)})
-			instructions = append(instructions, VMInstr{Op: OpStr, Oprand1: makeStrValueObj(sname), Oprand2: makeIntValueObj(int64(regIndex))})
-		}
-
-		for i, carg := range call.CallableArgs {
-			argIndex := len(call.Args) + len(call.VarArgNames) + i
-			sname := userFunc.Args[argIndex].Name
-
-			nestedCallInstructions := c.CompileFunctionCallToVMInstr(carg)
-			instructions = append(instructions, nestedCallInstructions...)
-			// Move result to the correct argument register
-			regIndex := len(call.VarArgNames) + i
-			instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(regIndex))})
-			instructions = append(instructions, VMInstr{Op: OpStr, Oprand1: makeStrValueObj(sname), Oprand2: makeIntValueObj(int64(regIndex))})
+			switch arg.Type {
+			case parser.ARG_LITERAL:
+				instructions = append(instructions, VMInstr{Op: OpMemSet, Oprand1: makeStrValueObj(sname), Oprand2: transformToVMDataObject(arg.Literal)})
+			case parser.ARG_VARIABLE:
+				instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(argRegs[i])), Oprand2: makeStrValueObj(arg.VarName)})
+				instructions = append(instructions, VMInstr{Op: OpStr, Oprand1: makeStrValueObj(sname), Oprand2: makeIntValueObj(int64(argRegs[i]))})
+			case parser.ARG_CALLABLE:
+				nestedCallInstructions := c.CompileFunctionCallToVMInstr(arg.Callable)
+				instructions = append(instructions, nestedCallInstructions...)
+				instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(argRegs[i]))})
+				instructions = append(instructions, VMInstr{Op: OpStr, Oprand1: makeStrValueObj(sname), Oprand2: makeIntValueObj(int64(argRegs[i]))})
+			}
 		}
 	}
+
 	// Perform the call
 	instructions = append(instructions, VMInstr{Op: OpCall, Oprand1: makeStrValueObj(call.Name)})
 

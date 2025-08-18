@@ -15,6 +15,21 @@ const (
 	BOOLEAN
 )
 
+type ArgumentType int
+
+const (
+	ARG_LITERAL ArgumentType = iota + 1
+	ARG_CALLABLE
+	ARG_VARIABLE
+)
+
+type Argument struct {
+	Type     ArgumentType
+	Literal  ValueObject
+	Callable CallObject
+	VarName  string
+}
+
 type FunctionObject struct {
 	Name string
 	Type FunctionType
@@ -24,10 +39,8 @@ type FunctionObject struct {
 }
 
 type CallObject struct {
-	Name         string
-	Args         []ValueObject
-	CallableArgs []CallObject
-	VarArgNames  []string
+	Name      string
+	Arguments []Argument
 }
 
 type ValueObject struct {
