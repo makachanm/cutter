@@ -217,6 +217,37 @@ func (vm *VM) Run() {
 	}
 }
 
+func performComparison(r1, r2 VMDataObject, floatOp func(float64, float64) bool, intOp func(int64, int64) bool) VMDataObject {
+	// Default to false if types are incompatible
+	result := false
+
+	switch r1.Type {
+	case INTGER:
+		switch r2.Type {
+		case INTGER:
+			if intOp != nil {
+				result = intOp(r1.IntData, r2.IntData)
+			}
+		case REAL:
+			if floatOp != nil {
+				result = floatOp(float64(r1.IntData), r2.FloatData)
+			}
+		}
+	case REAL:
+		switch r2.Type {
+		case INTGER:
+			if floatOp != nil {
+				result = floatOp(r1.FloatData, float64(r2.IntData))
+			}
+		case REAL:
+			if floatOp != nil {
+				result = floatOp(r1.FloatData, r2.FloatData)
+			}
+		}
+	}
+	return VMDataObject{Type: BOOLEAN, BoolData: result}
+}
+
 func performOperation(r1, r2 VMDataObject, floatOp func(float64, float64) float64, intOp func(int64, int64) int64, strOp func(string, string) string) VMDataObject {
 	switch r1.Type {
 	case INTGER:

@@ -159,6 +159,10 @@ const (
 	OpNot
 	OpCmpEq
 	OpCmpNeq
+	OpCmpGt
+	OpCmpLt
+	OpCmpGte
+	OpCmpLte
 
 	OpBrch
 
