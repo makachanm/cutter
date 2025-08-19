@@ -103,5 +103,5 @@ func NewNormData(d_data string) LexerTokenData {
 }
 
 func NewBoolData(d_data bool) LexerTokenData {
-	return LexerTokenData{Type: DATA_INT, BoolData: d_data}
+	return LexerTokenData{Type: DATA_BOOL, BoolData: d_data}
 }

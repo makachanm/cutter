@@ -16,12 +16,12 @@ func NewParser() *Parser {
 }
 
 func (p *Parser) makeTokenError(expected lexer.TokenType, err lexer.LexerToken) {
-	d := fmt.Sprintf("invalid token: %#v, expected was: %d", err, expected)
+	d := fmt.Sprintf("invalid token: %%#v, expected was: %%d", err, expected)
 	panic("unexpected syntax error - " + d)
 }
 
 func (p *Parser) makeDataError(expected lexer.LexerTokenDataType) {
-	d := fmt.Sprintf("invalid data: %d, expected was: %d", p.targets.Seek().Data.Type, expected)
+	d := fmt.Sprintf("invalid data: %%d, expected was: %%d", p.targets.Seek().Data.Type, expected)
 	panic("unexpected syntax error - " + d)
 }
 
@@ -83,10 +83,27 @@ func (p *Parser) doCallParse() CallObject {
 	}
 	call.Name = object.Data.ObjNameData
 
-	object = p.validCheckPop(lexer.KEYWORD_BRACKET_OPEN)
-	for object.Type != lexer.KEYWORD_BRACKET_CLOSE {
-		object, _ = p.targets.Pop()
-		if object.Type == lexer.WHITESPACE {
+	p.validCheckPop(lexer.KEYWORD_BRACKET_OPEN)
+
+	for {
+		// Peek at the next token to see if it's the end
+		next, ok := p.targets.Pop()
+		if !ok {
+			panic("unexpected end of token stream, expected ')'")
+		}
+		p.targets.Pushback()
+
+		if next.Type == lexer.KEYWORD_BRACKET_CLOSE {
+			p.targets.Pop() // Consume the closing bracket
+			break
+		}
+
+		object, ok := p.targets.Pop()
+		if !ok {
+			panic("unexpected end of token stream, expected ')'")
+		}
+
+		if object.Type == lexer.WHITESPACE || object.Type == lexer.NEWLINE {
 			continue
 		}
 
@@ -112,7 +129,10 @@ func (p *Parser) doCallParse() CallObject {
 
 				call.Arguments = append(call.Arguments, Argument{Type: ARG_CALLABLE, Callable: subcall})
 			}
-
+		default:
+			if object.Type != lexer.KEYWORD_BRACKET_CLOSE {
+				panic(fmt.Sprintf("unexpected token in argument list: %%#v", object))
+			}
 		}
 	}
 
@@ -120,18 +140,37 @@ func (p *Parser) doCallParse() CallObject {
 }
 
 func (p *Parser) doDefineParse() FunctionObject {
-	var fun FunctionObject = FunctionObject{}
+	fun := FunctionObject{
+		Parameters: make([]string, 0),
+	}
 
-	object := p.validCheckPop(lexer.KEYWORD_BRACKET_OPEN)
-	object = p.validCheckPop(lexer.VALUE)
+	p.validCheckPop(lexer.KEYWORD_BRACKET_OPEN)
+	object := p.validCheckPop(lexer.VALUE)
 	if object.Data.Type != lexer.DATA_OBJNAME {
 		p.makeDataError(lexer.DATA_OBJNAME)
 	}
-
 	fun.Name = object.Data.ObjNameData
 
-	for object.Type != lexer.KEYWORD_BRACKET_CLOSE {
-		object, _ = p.targets.Pop()
+	tempArgs := make([]CallObject, 0)
+
+	for {
+		// Peek at the next token to see if it's the end
+		next, ok := p.targets.Pop()
+		if !ok {
+			panic("unexpected end of token stream, expected ')'")
+		}
+		p.targets.Pushback()
+
+		if next.Type == lexer.KEYWORD_BRACKET_CLOSE {
+			p.targets.Pop() // Consume the closing bracket
+			break
+		}
+
+		// Now we know it's not the end, so we parse an argument/body/staticdata
+		object, _ := p.targets.Pop()
+		if object.Type == lexer.WHITESPACE || object.Type == lexer.NEWLINE {
+			continue
+		}
 
 		switch object.Data.Type {
 		case lexer.DATA_OBJNAME:
@@ -139,10 +178,10 @@ func (p *Parser) doDefineParse() FunctionObject {
 			p.targets.Pushback()
 
 			if next.Type != lexer.KEYWORD_BRACKET_OPEN {
-				fun.Args = append(fun.Args, CallObject{Name: object.Data.ObjNameData})
+				tempArgs = append(tempArgs, CallObject{Name: object.Data.ObjNameData})
 			} else {
 				p.targets.Pushback()
-				fun.Args = append(fun.Args, p.doCallParse())
+				tempArgs = append(tempArgs, p.doCallParse())
 			}
 
 		case lexer.DATA_INT:
@@ -153,6 +192,23 @@ func (p *Parser) doDefineParse() FunctionObject {
 			fun.StaticData = makeStrValueObj(object.Data.StrData)
 		case lexer.DATA_BOOL:
 			fun.StaticData = makeBoolValueObj(object.Data.BoolData)
+		default:
+			panic(fmt.Sprintf("unexpected token in function definition: %%#v", object))
+		}
+	}
+
+	// Now, interpret tempArgs into Parameters and Body
+	if len(tempArgs) > 0 {
+		// The last item is the body
+		fun.Body = tempArgs[len(tempArgs)-1]
+
+		// Everything before the last item is a parameter name
+		for i := 0; i < len(tempArgs)-1; i++ {
+			// Check that parameters are just names and not calls
+			if len(tempArgs[i].Arguments) > 0 {
+				panic(fmt.Sprintf("callable object is not allowed as a parameter name: %%#v", tempArgs[i]))
+			}
+			fun.Parameters = append(fun.Parameters, tempArgs[i].Name)
 		}
 	}
 

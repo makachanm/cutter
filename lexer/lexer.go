@@ -77,7 +77,14 @@ func (l *Lexer) DoLex(input string) []LexerToken {
 				continue
 			}
 			l.results = append(l.results, NewLexerToken(symbol.token_type, NewData()))
-			l.state = STATE_NORMSTRINGS
+			next := l.queue.Pop()
+			l.queue.Pushback()
+
+			if next.GetType() == WHITESPACE {
+				l.state = STATE_OBJNAME
+			} else {
+				l.state = STATE_NORMSTRINGS
+			}
 			if l.inDefine {
 				l.defineBracketLevel--
 				if l.defineBracketLevel == 0 {
@@ -120,6 +127,8 @@ func (l *Lexer) DoLex(input string) []LexerToken {
 				l.buffer = append(l.buffer, InvertedKeywordMap[symbol.token_type])
 				continue
 			}
+
+			//l.results = append(l.results, NewLexerToken(symbol.token_type, NewData()))
 
 			l.flushBuffer()
 

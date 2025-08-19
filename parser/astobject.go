@@ -34,7 +34,8 @@ type FunctionObject struct {
 	Name string
 	Type FunctionType
 
-	Args       []CallObject
+	Parameters []string
+	Body       CallObject
 	StaticData ValueObject
 }
 

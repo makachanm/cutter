@@ -27,7 +27,7 @@ func (q *ParserQueue) Pop() (lexer.LexerToken, bool) {
 }
 
 func (q *ParserQueue) Pushback() (lexer.LexerToken, bool) {
-	if q.pointer <= 0 {
+	if q.pointer <= -1 { // Changed condition to q.pointer <= -1
 		return lexer.LexerToken{}, false
 	}
 

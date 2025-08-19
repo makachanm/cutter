@@ -331,7 +331,23 @@ func (vm *VM) executeInstruction(instr VMInstr) {
 		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
 		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), VMDataObject{Type: BOOLEAN, BoolData: r1 != r2})
+	case OpBrch:
+		condition := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+		if condition.Type != BOOLEAN {
+			panic("Branch condition must be BOOLEAN type")
+		}
+
+		if condition.BoolData {
+			vm.Reg.InsertResult(vm.Reg.GetRegister(int(instr.Oprand2.IntData)))
+		} else {
+			vm.Reg.InsertResult(vm.Reg.GetRegister(int(instr.Oprand3.IntData)))
+		}
+
 	case OpClearReg:
 		vm.Reg.ClearRegisters()
+
+	case OpHlt:
+		// Stop execution
+		return
 	}
 }

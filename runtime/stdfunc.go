@@ -6,7 +6,7 @@ package runtime
 func GetStandardFuncs() map[string][]VMInstr {
 	StandardFuncs := make(map[string][]VMInstr)
 
-	// Use register 15 as a dedicated temporary register for standard functions
+	// Use register 1023 as a dedicated temporary register for standard functions
 	// to avoid clobbering argument registers (0 and 1).
 	tempReg := makeIntValueObj(1023)
 
@@ -48,7 +48,6 @@ func GetStandardFuncs() map[string][]VMInstr {
 	// Branching and Control Flow
 	StandardFuncs["ifel"] = []VMInstr{
 		{Op: OpBrch, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: makeIntValueObj(2)},
-		{Op: OpRslSet, Oprand1: makeIntValueObj(0)},
 	}
 
 	// Memory and Variable Manipulation
