@@ -54,10 +54,8 @@ func (c *Compiler) CompileASTToVMInstr(input parser.HeadNode) []VMInstr {
 			callInstructions := c.CompileFunctionCallToVMInstr(items.Call, []string{}, len(instructions))
 			instructions = append(instructions, callInstructions...)
 			// After a top-level call, store the result in stdout
-			if !(items.Call.Name == "echo" || items.Call.Name == "for") {
-				instructions = append(instructions, VMInstr{Op: OpRslStr, Oprand1: makeStrValueObj("stdout")})
-				instructions = append(instructions, VMInstr{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_IO_FLUSH)})
-			}
+			instructions = append(instructions, VMInstr{Op: OpRslStr, Oprand1: makeStrValueObj("stdout")})
+			instructions = append(instructions, VMInstr{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_IO_FLUSH)})
 
 			c.reg.reset()
 			instructions = append(instructions, VMInstr{Op: OpClearReg})
@@ -186,6 +184,78 @@ func (c *Compiler) CompileFunctionCallToVMInstr(call parser.CallObject, argNames
 		// Patch the conditional jump
 		loopEndOffset := currentOffset + len(instructions)
 		instructions[len(condInstructions)].Oprand2 = makeIntValueObj(int64(loopEndOffset))
+
+		return instructions
+	} else if call.Name == "chain" {
+		if len(call.Arguments) == 0 {
+			return instructions
+		}
+
+		intermediateReg := c.reg.alloc()
+
+		// Handle the first argument
+		firstArg := call.Arguments[0]
+		argInstr := c.compileArgument(firstArg, argNames, intermediateReg, currentOffset+len(instructions))
+		instructions = append(instructions, argInstr...)
+
+		// Chain the rest of the arguments
+		for i := 1; i < len(call.Arguments); i++ {
+			regStateBeforeSubCall := c.reg.next
+
+			nextArg := call.Arguments[i]
+			var nextCall parser.CallObject
+
+			if nextArg.Type == parser.ARG_CALLABLE {
+				nextCall = nextArg.Callable
+			} else if nextArg.Type == parser.ARG_VARIABLE {
+				nextCall = parser.CallObject{Name: nextArg.VarName, Arguments: []parser.Argument{}}
+			} else {
+				panic("chain arguments from the second one must be callable or a function name")
+			}
+
+			_, isStandard := c.standardFuncs[nextCall.Name]
+			userFunc, isUserFunc := c.funcInfo[nextCall.Name]
+
+			// Compile arguments for the next call
+			argRegs := make([]int, len(nextCall.Arguments))
+			for j := range nextCall.Arguments {
+				argRegs[j] = c.reg.alloc()
+			}
+			for j, arg := range nextCall.Arguments {
+				argCompileInstr := c.compileArgument(arg, argNames, argRegs[j], currentOffset+len(instructions))
+				instructions = append(instructions, argCompileInstr...)
+			}
+
+			// Pass arguments
+			if isStandard {
+				instructions = append(instructions, VMInstr{Op: OpRegMov, Oprand1: makeIntValueObj(int64(intermediateReg)), Oprand2: makeIntValueObj(0)})
+				for j, reg := range argRegs {
+					instructions = append(instructions, VMInstr{Op: OpRegMov, Oprand1: makeIntValueObj(int64(reg)), Oprand2: makeIntValueObj(int64(j+1))})
+				}
+			} else if isUserFunc {
+				if len(userFunc.Parameters) > 0 {
+					paramName := userFunc.Parameters[0]
+					instructions = append(instructions, VMInstr{Op: OpStr, Oprand1: makeStrValueObj(paramName), Oprand2: makeIntValueObj(int64(intermediateReg))})
+				}
+				if len(userFunc.Parameters) < len(argRegs)+1 {
+					panic("too many arguments in chain call to " + nextCall.Name)
+				}
+				for j, reg := range argRegs {
+					paramName := userFunc.Parameters[j+1]
+					instructions = append(instructions, VMInstr{Op: OpStr, Oprand1: makeStrValueObj(paramName), Oprand2: makeIntValueObj(int64(reg))})
+				}
+			} else {
+				panic("chained function not found: " + nextCall.Name)
+			}
+
+			// Perform the call and store the result for the next iteration
+			instructions = append(instructions, VMInstr{Op: OpCall, Oprand1: makeStrValueObj(nextCall.Name)})
+			instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(intermediateReg))})
+
+			c.reg.next = regStateBeforeSubCall
+		}
+
+		instructions = append(instructions, VMInstr{Op: OpRslSet, Oprand1: makeIntValueObj(int64(intermediateReg))})
 
 		return instructions
 	}

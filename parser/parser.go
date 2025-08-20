@@ -131,7 +131,7 @@ func (p *Parser) doCallParse() CallObject {
 			}
 		default:
 			if object.Type != lexer.KEYWORD_BRACKET_CLOSE {
-				panic(fmt.Sprintf("unexpected token in argument list: %%#v", object))
+				panic(fmt.Sprintf("unexpected token in argument list: %#v", object))
 			}
 		}
 	}
