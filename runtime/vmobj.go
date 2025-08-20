@@ -165,6 +165,8 @@ const (
 	OpCmpLte
 
 	OpBrch
+	OpJmp
+	OpJmpIfFalse
 
 	OpClearReg
 	OpHlt

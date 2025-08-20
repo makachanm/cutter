@@ -1,5 +1,8 @@
 # Standard Functions
 
+### echo
+첫번째 인수를 받아 출력한다.
+
 ### add / sub / mul / div / mod
 Int / Real / Str에 한해 사칙연산을 수행한다. 두개의 인자를 받는다. 반환값은 연산의 결과이다.
 

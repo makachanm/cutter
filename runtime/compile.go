@@ -51,11 +51,13 @@ func (c *Compiler) CompileASTToVMInstr(input parser.HeadNode) []VMInstr {
 			instructions = append(instructions, c.CompileFunctionDefToVMInstr(items.Func)...)
 
 		case parser.FUNCTION_CALL:
-			callInstructions := c.CompileFunctionCallToVMInstr(items.Call, []string{})
+			callInstructions := c.CompileFunctionCallToVMInstr(items.Call, []string{}, len(instructions))
 			instructions = append(instructions, callInstructions...)
 			// After a top-level call, store the result in stdout
-			instructions = append(instructions, VMInstr{Op: OpRslStr, Oprand1: makeStrValueObj("stdout")})
-			instructions = append(instructions, VMInstr{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_IO_FLUSH)})
+			if !(items.Call.Name == "echo" || items.Call.Name == "for") {
+				instructions = append(instructions, VMInstr{Op: OpRslStr, Oprand1: makeStrValueObj("stdout")})
+				instructions = append(instructions, VMInstr{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_IO_FLUSH)})
+			}
 
 			c.reg.reset()
 			instructions = append(instructions, VMInstr{Op: OpClearReg})
@@ -106,7 +108,7 @@ func (c *Compiler) CompileFunctionDefToVMInstr(fnc parser.FunctionObject) []VMIn
 			instructions = append(instructions, VMInstr{Op: OpRslSet, Oprand1: makeIntValueObj(int64(tempReg))})
 		} else {
 			// It's a real function call.
-			bodyInstructions := c.CompileFunctionCallToVMInstr(body, argNames)
+			bodyInstructions := c.CompileFunctionCallToVMInstr(body, argNames, len(instructions))
 			instructions = append(instructions, bodyInstructions...)
 		}
 	}
@@ -115,8 +117,78 @@ func (c *Compiler) CompileFunctionDefToVMInstr(fnc parser.FunctionObject) []VMIn
 	return instructions
 }
 
-func (c *Compiler) CompileFunctionCallToVMInstr(call parser.CallObject, argNames []string) []VMInstr {
+func (c *Compiler) compileArgument(arg parser.Argument, argNames []string, targetReg int, currentOffset int) []VMInstr {
 	instructions := make([]VMInstr, 0)
+	switch arg.Type {
+	case parser.ARG_LITERAL:
+		instructions = append(instructions, VMInstr{Op: OpRegSet, Oprand1: makeIntValueObj(int64(targetReg)), Oprand2: transformToVMDataObject(arg.Literal)})
+	case parser.ARG_VARIABLE:
+		isParam := false
+		paramIndex := -1
+		for j, name := range argNames {
+			if name == arg.VarName {
+				isParam = true
+				paramIndex = j
+				break
+			}
+		}
+
+		if isParam {
+			instructions = append(instructions, VMInstr{Op: OpRegMov, Oprand1: makeIntValueObj(int64(paramIndex)), Oprand2: makeIntValueObj(int64(targetReg))})
+		} else if _, isUserFunc := c.funcInfo[arg.VarName]; isUserFunc {
+			callObj := parser.CallObject{Name: arg.VarName, Arguments: []parser.Argument{}}
+			nestedCallInstructions := c.CompileFunctionCallToVMInstr(callObj, argNames, currentOffset+len(instructions))
+			instructions = append(instructions, nestedCallInstructions...)
+			instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(targetReg))})
+		} else if _, isStdFunc := c.standardFuncs[arg.VarName]; isStdFunc {
+			instructions = append(instructions, VMInstr{Op: OpRegSet, Oprand1: makeIntValueObj(int64(targetReg)), Oprand2: makeStrValueObj(arg.VarName)})
+		} else {
+			instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(targetReg)), Oprand2: makeStrValueObj(arg.VarName)})
+		}
+	case parser.ARG_CALLABLE:
+		nestedCallInstructions := c.CompileFunctionCallToVMInstr(arg.Callable, argNames, currentOffset+len(instructions))
+		instructions = append(instructions, nestedCallInstructions...)
+		instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(targetReg))})
+	}
+	return instructions
+}
+
+func (c *Compiler) CompileFunctionCallToVMInstr(call parser.CallObject, argNames []string, currentOffset int) []VMInstr {
+	instructions := make([]VMInstr, 0)
+
+	if call.Name == "for" {
+		if len(call.Arguments) != 2 {
+			panic("'for' function requires 2 arguments: a condition and a body")
+		}
+
+		condArg := call.Arguments[0]
+		bodyArg := call.Arguments[1]
+
+		loopStartOffset := currentOffset
+
+		// Compile condition
+		condReg := c.reg.alloc()
+		condInstructions := c.compileArgument(condArg, argNames, condReg, currentOffset)
+		instructions = append(instructions, condInstructions...)
+
+		// Conditional jump to end of loop
+		jmpIfFalseInstruction := VMInstr{Op: OpJmpIfFalse, Oprand1: makeIntValueObj(int64(condReg))}
+		instructions = append(instructions, jmpIfFalseInstruction)
+
+		// Compile body
+		bodyReg := c.reg.alloc()
+		bodyInstructions := c.compileArgument(bodyArg, argNames, bodyReg, currentOffset+len(instructions))
+		instructions = append(instructions, bodyInstructions...)
+
+		// Unconditional jump back to the start
+		instructions = append(instructions, VMInstr{Op: OpJmp, Oprand1: makeIntValueObj(int64(loopStartOffset))})
+
+		// Patch the conditional jump
+		loopEndOffset := currentOffset + len(instructions)
+		instructions[len(condInstructions)].Oprand2 = makeIntValueObj(int64(loopEndOffset))
+
+		return instructions
+	}
 
 	argRegs := make([]int, len(call.Arguments))
 	for i := range call.Arguments {
@@ -136,37 +208,8 @@ func (c *Compiler) CompileFunctionCallToVMInstr(call parser.CallObject, argNames
 				}
 			}
 
-			switch arg.Type {
-			case parser.ARG_LITERAL:
-				instructions = append(instructions, VMInstr{Op: OpRegSet, Oprand1: makeIntValueObj(int64(argRegs[i])), Oprand2: transformToVMDataObject(arg.Literal)})
-			case parser.ARG_VARIABLE:
-				isParam := false
-				paramIndex := -1
-				for j, name := range argNames {
-					if name == arg.VarName {
-						isParam = true
-						paramIndex = j
-						break
-					}
-				}
-
-				if isParam {
-					instructions = append(instructions, VMInstr{Op: OpRegMov, Oprand1: makeIntValueObj(int64(paramIndex)), Oprand2: makeIntValueObj(int64(argRegs[i]))})
-				} else if _, isUserFunc := c.funcInfo[arg.VarName]; isUserFunc {
-					callObj := parser.CallObject{Name: arg.VarName, Arguments: []parser.Argument{}}
-					nestedCallInstructions := c.CompileFunctionCallToVMInstr(callObj, argNames)
-					instructions = append(instructions, nestedCallInstructions...)
-					instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(argRegs[i]))})
-				} else if _, isStdFunc := c.standardFuncs[arg.VarName]; isStdFunc {
-					instructions = append(instructions, VMInstr{Op: OpRegSet, Oprand1: makeIntValueObj(int64(argRegs[i])), Oprand2: makeStrValueObj(arg.VarName)})
-				} else {
-					instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(argRegs[i])), Oprand2: makeStrValueObj(arg.VarName)})
-				}
-			case parser.ARG_CALLABLE:
-				nestedCallInstructions := c.CompileFunctionCallToVMInstr(arg.Callable, argNames)
-				instructions = append(instructions, nestedCallInstructions...)
-				instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(argRegs[i]))})
-			}
+			argInstructions := c.compileArgument(arg, argNames, argRegs[i], currentOffset+len(instructions))
+			instructions = append(instructions, argInstructions...)
 		}
 		for i := range call.Arguments {
 			instructions = append(instructions, VMInstr{Op: OpRegMov, Oprand1: makeIntValueObj(int64(argRegs[i])), Oprand2: makeIntValueObj(int64(i))})
@@ -184,7 +227,7 @@ func (c *Compiler) CompileFunctionCallToVMInstr(call parser.CallObject, argNames
 				instructions = append(instructions, VMInstr{Op: OpStr, Oprand1: makeStrValueObj(sname), Oprand2: makeIntValueObj(int64(tempReg))})
 			case parser.ARG_CALLABLE:
 				tempReg := c.reg.alloc()
-				nestedCallInstructions := c.CompileFunctionCallToVMInstr(arg.Callable, argNames)
+				nestedCallInstructions := c.CompileFunctionCallToVMInstr(arg.Callable, argNames, currentOffset+len(instructions))
 				instructions = append(instructions, nestedCallInstructions...)
 				instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(tempReg))})
 				instructions = append(instructions, VMInstr{Op: OpStr, Oprand1: makeStrValueObj(sname), Oprand2: makeIntValueObj(int64(tempReg))})

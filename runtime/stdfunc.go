@@ -41,6 +41,22 @@ func GetStandardFuncs() map[string][]VMInstr {
 		{Op: OpCmpNeq, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: tempReg},
 		{Op: OpRslSet, Oprand1: tempReg},
 	}
+	StandardFuncs["bigger"] = []VMInstr{
+		{Op: OpCmpGt, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: tempReg},
+		{Op: OpRslSet, Oprand1: tempReg},
+	}
+	StandardFuncs["smaller"] = []VMInstr{
+		{Op: OpCmpLt, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: tempReg},
+		{Op: OpRslSet, Oprand1: tempReg},
+	}
+	StandardFuncs["bigsame"] = []VMInstr{
+		{Op: OpCmpGte, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: tempReg},
+		{Op: OpRslSet, Oprand1: tempReg},
+	}
+	StandardFuncs["smallsame"] = []VMInstr{
+		{Op: OpCmpLte, Oprand1: makeIntValueObj(0), Oprand2: makeIntValueObj(1), Oprand3: tempReg},
+		{Op: OpRslSet, Oprand1: tempReg},
+	}
 
 	// String Functions
 	StandardFuncs["strcontact"] = StandardFuncs["add"]
@@ -60,6 +76,13 @@ func GetStandardFuncs() map[string][]VMInstr {
 		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_SET_FUNC_RETURN)},
 		// The syscall itself sets the result of the 'set' operation (true for success)
 		// So, no need for OpRslSet here, as the syscall already handles it.
+	}
+
+	StandardFuncs["echo"] = []VMInstr{
+		{Op: OpStr, Oprand1: makeStrValueObj("stdout"), Oprand2: makeIntValueObj(int64(0))},
+		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_IO_FLUSH)},
+		{Op: OpRslSet, Oprand1: VMDataObject{}},
+		{Op: OpClearReg},
 	}
 
 	// System Functions

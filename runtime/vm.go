@@ -194,6 +194,30 @@ func (vm *VM) Run() {
 			r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
 			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), VMDataObject{Type: BOOLEAN, BoolData: r1 != r2})
 
+		case OpCmpGt:
+			r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+			r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
+			result := performComparison(r1, r2, func(a, b float64) bool { return a > b }, func(a, b int64) bool { return a > b })
+			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
+
+		case OpCmpLt:
+			r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+			r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
+			result := performComparison(r1, r2, func(a, b float64) bool { return a < b }, func(a, b int64) bool { return a < b })
+			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
+
+		case OpCmpGte:
+			r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+			r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
+			result := performComparison(r1, r2, func(a, b float64) bool { return a >= b }, func(a, b int64) bool { return a >= b })
+			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
+
+		case OpCmpLte:
+			r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+			r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
+			result := performComparison(r1, r2, func(a, b float64) bool { return a <= b }, func(a, b int64) bool { return a <= b })
+			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
+
 		case OpBrch:
 			condition := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 			if condition.Type != BOOLEAN {
@@ -204,6 +228,17 @@ func (vm *VM) Run() {
 				vm.Reg.InsertResult(vm.Reg.GetRegister(int(instr.Oprand2.IntData)))
 			} else {
 				vm.Reg.InsertResult(vm.Reg.GetRegister(int(instr.Oprand3.IntData)))
+			}
+
+		case OpJmp:
+			vm.PC = int(instr.Oprand1.IntData)
+			continue
+
+		case OpJmpIfFalse:
+			condition := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+			if condition.Type == BOOLEAN && !condition.BoolData {
+				vm.PC = int(instr.Oprand2.IntData)
+				continue
 			}
 
 		case OpClearReg:
@@ -362,6 +397,26 @@ func (vm *VM) executeInstruction(instr VMInstr) {
 		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
 		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), VMDataObject{Type: BOOLEAN, BoolData: r1 != r2})
+	case OpCmpGt:
+		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
+		result := performComparison(r1, r2, func(a, b float64) bool { return a > b }, func(a, b int64) bool { return a > b })
+		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
+	case OpCmpLt:
+		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
+		result := performComparison(r1, r2, func(a, b float64) bool { return a < b }, func(a, b int64) bool { return a < b })
+		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
+	case OpCmpGte:
+		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
+		result := performComparison(r1, r2, func(a, b float64) bool { return a >= b }, func(a, b int64) bool { return a >= b })
+		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
+	case OpCmpLte:
+		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
+		result := performComparison(r1, r2, func(a, b float64) bool { return a <= b }, func(a, b int64) bool { return a <= b })
+		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 	case OpBrch:
 		condition := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 		if condition.Type != BOOLEAN {
@@ -373,6 +428,14 @@ func (vm *VM) executeInstruction(instr VMInstr) {
 		} else {
 			vm.Reg.InsertResult(vm.Reg.GetRegister(int(instr.Oprand3.IntData)))
 		}
+
+	case OpJmp:
+		// This is a control flow instruction and should only be handled by the main Run loop.
+		panic("OpJmp should not be called from executeInstruction")
+
+	case OpJmpIfFalse:
+		// This is a control flow instruction and should only be handled by the main Run loop.
+		panic("OpJmpIfFalse should not be called from executeInstruction")
 
 	case OpClearReg:
 		vm.Reg.ClearRegisters()
