@@ -1,16 +1,12 @@
 package runtime
 
 const (
-	SYS_IO_FLUSH        = 1
-	SYS_SET_FUNC_RETURN = 2 // New syscall for setting function return value
+	SYS_SET_FUNC_RETURN = 1 // New syscall for setting function return value
+	SYS_IO_FLUSH        = 2
 )
 
 func doSyscall(vm *VM, instr VMInstr) {
 	switch instr.Oprand1.IntData {
-	case SYS_IO_FLUSH:
-		stdout := vm.Mem.GetObj("stdout")
-		vm.IO.WriteObjectToStream(*stdout)
-		vm.Mem.SetObj("stdout", VMDataObject{})
 	case SYS_SET_FUNC_RETURN:
 		// Expect function name in register 0 and return value in register 1
 		funcNameObj := vm.Reg.GetRegister(0)
@@ -41,5 +37,10 @@ func doSyscall(vm *VM, instr VMInstr) {
 
 		// Set the result of the syscall itself (e.g., true for success)
 		vm.Reg.InsertResult(VMDataObject{Type: BOOLEAN, BoolData: true})
+
+	case SYS_IO_FLUSH:
+		stdout := vm.Mem.GetObj("stdout")
+		vm.IO.WriteObjectToStream(*stdout)
+		vm.Mem.SetObj("stdout", VMDataObject{})
 	}
 }
