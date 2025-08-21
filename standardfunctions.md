@@ -1,5 +1,8 @@
 # Standard Functions
 
+### include
+첫번째 인수(경로)를 받아 해당 경로의 Cutter 파일을 현재 파일에 포함한다.
+
 ### echo
 첫번째 인수를 받아 출력한다.
 

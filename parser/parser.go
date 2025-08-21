@@ -51,12 +51,28 @@ func (p *Parser) DoParse(tokens []lexer.LexerToken) HeadNode {
 				Call: call,
 			})
 
+			if !p.targets.IsEmpty() {
+				next, _ := p.targets.Pop()
+				p.targets.Pushback()
+				if next.Type == lexer.NEWLINE {
+					p.targets.Pop()
+				}
+			}
+
 		case lexer.KEYWORD_DEFINE:
 			fun := p.doDefineParse()
 			head.Bodys = append(head.Bodys, BodyObject{
 				Type: FUCNTION_DEFINITION,
 				Func: fun,
 			})
+
+			if !p.targets.IsEmpty() {
+				next, _ := p.targets.Pop()
+				p.targets.Pushback()
+				if next.Type == lexer.NEWLINE {
+					p.targets.Pop()
+				}
+			}
 
 		case lexer.NORM_STRINGS:
 			head.Bodys = append(head.Bodys, BodyObject{
