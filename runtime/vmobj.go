@@ -56,7 +56,8 @@ func (rg *VMArgumentRegisters) GetResult() VMDataObject {
 }
 
 type VMMEMObjectTable struct {
-	ValueTable     map[string]int
+	DataTable      map[string]int
+	FunctionTable  map[string]int
 	DataMemory     []VMDataObject
 	FunctionMemory []VMFunctionObject
 
@@ -66,7 +67,8 @@ type VMMEMObjectTable struct {
 
 func NewVMMEMObjTable() VMMEMObjectTable {
 	return VMMEMObjectTable{
-		ValueTable:     make(map[string]int),
+		DataTable:      make(map[string]int),
+		FunctionTable:  make(map[string]int),
 		DataMemory:     make([]VMDataObject, 0),
 		FunctionMemory: make([]VMFunctionObject, 0),
 
@@ -77,13 +79,13 @@ func NewVMMEMObjTable() VMMEMObjectTable {
 
 func (v *VMMEMObjectTable) MakeObj(name string) {
 	v.DataMemory = append(v.DataMemory, VMDataObject{})
-	v.ValueTable[name] = v.currunt_free_dm_pointer
+	v.DataTable[name] = v.currunt_free_dm_pointer
 
 	v.currunt_free_dm_pointer++
 }
 
 func (v *VMMEMObjectTable) GetObj(name string) *VMDataObject {
-	idx, ok := v.ValueTable[name]
+	idx, ok := v.DataTable[name]
 	if !ok {
 		panic("VMDataObject not found: " + name)
 	}
@@ -91,7 +93,7 @@ func (v *VMMEMObjectTable) GetObj(name string) *VMDataObject {
 }
 
 func (v *VMMEMObjectTable) SetObj(name string, data VMDataObject) {
-	idx, ok := v.ValueTable[name]
+	idx, ok := v.DataTable[name]
 	if !ok {
 		panic("VMDataObject not found: " + name)
 	}
@@ -99,7 +101,7 @@ func (v *VMMEMObjectTable) SetObj(name string, data VMDataObject) {
 }
 
 func (v *VMMEMObjectTable) HasObj(name string) bool {
-	idx, ok := v.ValueTable[name]
+	idx, ok := v.DataTable[name]
 	if !ok || idx >= len(v.DataMemory) {
 		return false
 	}
@@ -108,12 +110,12 @@ func (v *VMMEMObjectTable) HasObj(name string) bool {
 
 func (v *VMMEMObjectTable) MakeFunc(name string) {
 	v.FunctionMemory = append(v.FunctionMemory, VMFunctionObject{})
-	v.ValueTable[name] = v.currunt_free_fm_pointer
+	v.FunctionTable[name] = v.currunt_free_fm_pointer
 	v.currunt_free_fm_pointer++
 }
 
 func (v *VMMEMObjectTable) GetFunc(name string) *VMFunctionObject {
-	idx, ok := v.ValueTable[name]
+	idx, ok := v.FunctionTable[name]
 	if !ok || idx >= len(v.FunctionMemory) {
 		panic("VMFunctionObject not found: " + name)
 	}
@@ -121,7 +123,7 @@ func (v *VMMEMObjectTable) GetFunc(name string) *VMFunctionObject {
 }
 
 func (v *VMMEMObjectTable) SetFunc(name string, fn VMFunctionObject) {
-	idx, ok := v.ValueTable[name]
+	idx, ok := v.FunctionTable[name]
 	if !ok || idx >= len(v.FunctionMemory) {
 		panic("VMFunctionObject not found: " + name)
 	}

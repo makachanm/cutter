@@ -20,23 +20,6 @@ var KeywordMap KeywordMatchingItem = KeywordMatchingItem{
 
 var InvertedKeywordMap = make(InvertedKeywordMatchingItem)
 
-type PossibleValueMatchingItem map[string]LexerTokenDataType
-
-var PossibleValueMap PossibleValueMatchingItem = PossibleValueMatchingItem{
-	"0": DATA_INT,
-	"1": DATA_INT,
-	"2": DATA_INT,
-	"3": DATA_INT,
-	"4": DATA_INT,
-	"5": DATA_INT,
-	"6": DATA_INT,
-	"7": DATA_INT,
-	"8": DATA_INT,
-	"9": DATA_INT,
-
-	".": DATA_REAL,
-}
-
 func init() {
 	for key, val := range KeywordMap {
 		InvertedKeywordMap[val] = key

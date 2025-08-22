@@ -11,6 +11,7 @@ import (
 
 func main() {
 	versionFlag := flag.Bool("v", false, "Show Version")
+	debugFlag := flag.Bool("d", false, "Debug Mode")
 	writeToFileFlag := flag.String("w", "", "Write excution result to file")
 	input := flag.String("i", "", "Input file")
 
@@ -40,8 +41,39 @@ func main() {
 
 	vmInstr := com.CompileASTToVMInstr(ast)
 
+	if *debugFlag {
+		fmt.Println(" ----- INSTRUCTIONS -----")
+
+		for _, instr := range vmInstr {
+			fmt.Println(runtime.ResolveVMInstruction(instr))
+		}
+	}
+
 	vm := runtime.NewVM(vmInstr)
 	vm.Run()
+
+	if *debugFlag {
+		fmt.Println(" ----- DATA TABLE -----")
+		for i, memdata := range vm.Mem.DataTable {
+			fmt.Println(i, ":", memdata)
+		}
+
+		fmt.Println(" ----- FUNCTION TABLE -----")
+		for i, memdata := range vm.Mem.FunctionTable {
+			fmt.Println(i, ":", memdata)
+		}
+
+		fmt.Println(" ----- DATA MEMORY -----")
+		for i, memdata := range vm.Mem.DataMemory {
+			fmt.Println(i, ":", memdata)
+		}
+
+		fmt.Println(" ----- FUNCTION MEMORY -----")
+		for i, memdata := range vm.Mem.FunctionMemory {
+			fmt.Println(i, ":", memdata)
+		}
+
+	}
 
 	result := vm.IO.ReadBuffer()
 

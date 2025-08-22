@@ -167,10 +167,7 @@ func (c *Compiler) compileArgument(arg parser.Argument, argNames []string, targe
 		if isParam {
 			instructions = append(instructions, VMInstr{Op: OpRegMov, Oprand1: makeIntValueObj(int64(paramIndex)), Oprand2: makeIntValueObj(int64(targetReg))})
 		} else if _, isUserFunc := c.funcInfo[arg.VarName]; isUserFunc {
-			callObj := parser.CallObject{Name: arg.VarName, Arguments: []parser.Argument{}}
-			nestedCallInstructions := c.CompileFunctionCallToVMInstr(callObj, argNames, currentOffset+len(instructions))
-			instructions = append(instructions, nestedCallInstructions...)
-			instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(targetReg))})
+			instructions = append(instructions, VMInstr{Op: OpRegSet, Oprand1: makeIntValueObj(int64(targetReg)), Oprand2: makeStrValueObj(arg.VarName)})
 		} else if _, isStdFunc := c.standardFuncs[arg.VarName]; isStdFunc {
 			instructions = append(instructions, VMInstr{Op: OpRegSet, Oprand1: makeIntValueObj(int64(targetReg)), Oprand2: makeStrValueObj(arg.VarName)})
 		} else {
@@ -325,9 +322,16 @@ func (c *Compiler) CompileFunctionCallToVMInstr(call parser.CallObject, argNames
 			case parser.ARG_LITERAL:
 				instructions = append(instructions, VMInstr{Op: OpMemSet, Oprand1: makeStrValueObj(sname), Oprand2: transformToVMDataObject(arg.Literal)})
 			case parser.ARG_VARIABLE:
-				tempReg := c.reg.alloc()
-				instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(tempReg)), Oprand2: makeStrValueObj(arg.VarName)})
-				instructions = append(instructions, VMInstr{Op: OpStr, Oprand1: makeStrValueObj(sname), Oprand2: makeIntValueObj(int64(tempReg))})
+				if _, isUserFunc := c.funcInfo[arg.VarName]; isUserFunc {
+					// It's a function name, treat it as a string.
+					tempReg := c.reg.alloc()
+					instructions = append(instructions, VMInstr{Op: OpRegSet, Oprand1: makeIntValueObj(int64(tempReg)), Oprand2: makeStrValueObj(arg.VarName)})
+					instructions = append(instructions, VMInstr{Op: OpStr, Oprand1: makeStrValueObj(sname), Oprand2: makeIntValueObj(int64(tempReg))})
+				} else {
+					tempReg := c.reg.alloc()
+					instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(tempReg)), Oprand2: makeStrValueObj(arg.VarName)})
+					instructions = append(instructions, VMInstr{Op: OpStr, Oprand1: makeStrValueObj(sname), Oprand2: makeIntValueObj(int64(tempReg))})
+				}
 			case parser.ARG_CALLABLE:
 				tempReg := c.reg.alloc()
 				nestedCallInstructions := c.CompileFunctionCallToVMInstr(arg.Callable, argNames, currentOffset+len(instructions))

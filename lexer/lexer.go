@@ -3,6 +3,7 @@ package lexer
 import (
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 type Lexer struct {
@@ -61,7 +62,7 @@ func (l *Lexer) DoLex(input string) []LexerToken {
 			l.flushBuffer()
 			l.results = append(l.results, NewLexerToken(symbol.token_type, NewData()))
 			l.inDefine = true
-		
+
 		case KEYWORD_INCLUDE:
 			if l.state == STATE_STRINGVALUE {
 				l.buffer = append(l.buffer, InvertedKeywordMap[symbol.token_type])
@@ -170,32 +171,36 @@ func (l *Lexer) DoLex(input string) []LexerToken {
 }
 
 func (l *Lexer) getValues(data string) LexerTokenData {
-	var dtype LexerTokenDataType = DATA_INT
-	for _, chars := range strings.Split(data, "") {
-		if dtype != PossibleValueMap[chars] {
-			dtype = PossibleValueMap[chars]
-			break
+	isInt := true
+	isReal := true
+	decimalPointCount := 0
+
+	for _, r := range data {
+		if !unicode.IsDigit(r) {
+			isInt = false
+		}
+		if r == '.' {
+			decimalPointCount++
+		} else if !unicode.IsDigit(r) {
+			isReal = false
 		}
 	}
 
-	switch dtype {
-	case DATA_INT:
+	if isInt {
 		d, err := strconv.ParseInt(data, 10, 64)
-		if err != nil {
-			panic(err)
+		if err == nil {
+			return NewIntData(d)
 		}
-		return NewIntData(d)
-
-	case DATA_REAL:
-		d, err := strconv.ParseFloat(data, 64)
-		if err != nil {
-			panic(err)
-		}
-		return NewRealData(d)
-
-	default:
-		return NewObjNameData(data)
 	}
+
+	if isReal && decimalPointCount == 1 {
+		d, err := strconv.ParseFloat(data, 64)
+		if err == nil {
+			return NewRealData(d)
+		}
+	}
+
+	return NewObjNameData(data)
 }
 
 func (l *Lexer) flushBuffer() {
