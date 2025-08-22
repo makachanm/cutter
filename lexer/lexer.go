@@ -14,6 +14,7 @@ type Lexer struct {
 
 	inDefine           bool
 	defineBracketLevel int
+	inInclude          bool
 	ignoreNextNewline  bool
 }
 
@@ -23,6 +24,7 @@ func NewLexer() *Lexer {
 	lex.results = make([]LexerToken, 0)
 	lex.inDefine = false
 	lex.defineBracketLevel = 0
+	lex.inInclude = false
 	lex.ignoreNextNewline = false
 
 	return lex
@@ -59,6 +61,15 @@ func (l *Lexer) DoLex(input string) []LexerToken {
 			l.flushBuffer()
 			l.results = append(l.results, NewLexerToken(symbol.token_type, NewData()))
 			l.inDefine = true
+		
+		case KEYWORD_INCLUDE:
+			if l.state == STATE_STRINGVALUE {
+				l.buffer = append(l.buffer, InvertedKeywordMap[symbol.token_type])
+				continue
+			}
+			l.flushBuffer()
+			l.results = append(l.results, NewLexerToken(symbol.token_type, NewData()))
+			l.inInclude = true
 
 		case KEYWORD_BRACKET_OPEN:
 			if l.state == STATE_STRINGVALUE {
@@ -91,6 +102,10 @@ func (l *Lexer) DoLex(input string) []LexerToken {
 					l.inDefine = false // End of define block
 					l.ignoreNextNewline = true
 				}
+			}
+			if l.inInclude {
+				l.inInclude = false
+				l.ignoreNextNewline = true
 			}
 
 		case STRING_QUOTEMARK:

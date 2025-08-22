@@ -6,6 +6,7 @@ type InvertedKeywordMatchingItem map[TokenType]string
 var KeywordMap KeywordMatchingItem = KeywordMatchingItem{
 	"@":       KEYWORD_CALL,
 	"@define": KEYWORD_DEFINE,
+	"@include": KEYWORD_INCLUDE,
 	"(":       KEYWORD_BRACKET_OPEN,
 	")":       KEYWORD_BRACKET_CLOSE,
 

@@ -16,12 +16,12 @@ func NewParser() *Parser {
 }
 
 func (p *Parser) makeTokenError(expected lexer.TokenType, err lexer.LexerToken) {
-	d := fmt.Sprintf("invalid token: %%#v, expected was: %%d", err, expected)
+	d := fmt.Sprintf("invalid token: %#v, expected was: %d", err, expected)
 	panic("unexpected syntax error - " + d)
 }
 
 func (p *Parser) makeDataError(expected lexer.LexerTokenDataType) {
-	d := fmt.Sprintf("invalid data: %%d, expected was: %%d", p.targets.Seek().Data.Type, expected)
+	d := fmt.Sprintf("invalid data: %d, expected was: %d", p.targets.Seek().Data.Type, expected)
 	panic("unexpected syntax error - " + d)
 }
 
@@ -73,6 +73,20 @@ func (p *Parser) DoParse(tokens []lexer.LexerToken) HeadNode {
 					p.targets.Pop()
 				}
 			}
+		case lexer.KEYWORD_INCLUDE:
+			call := p.doIncludeParse()
+			head.Bodys = append(head.Bodys, BodyObject{
+				Type: FUNCTION_CALL,
+				Call: call,
+			})
+
+			if !p.targets.IsEmpty() {
+				next, _ := p.targets.Pop()
+				p.targets.Pushback()
+				if next.Type == lexer.NEWLINE {
+					p.targets.Pop()
+				}
+			}
 
 		case lexer.NORM_STRINGS:
 			head.Bodys = append(head.Bodys, BodyObject{
@@ -87,6 +101,28 @@ func (p *Parser) DoParse(tokens []lexer.LexerToken) HeadNode {
 	}
 
 	return head
+}
+
+func (p *Parser) doIncludeParse() CallObject {
+	var call CallObject = CallObject{}
+	call.Name = "include"
+	call.Arguments = make([]Argument, 0)
+
+	p.validCheckPop(lexer.KEYWORD_BRACKET_OPEN)
+
+	object, ok := p.targets.Pop()
+	if !ok {
+		panic("unexpected end of token stream, expected ')'")
+	}
+
+	if object.Data.Type != lexer.DATA_STR {
+		p.makeDataError(lexer.DATA_STR)
+	}
+	call.Arguments = append(call.Arguments, Argument{Type: ARG_LITERAL, Literal: makeStrValueObj(object.Data.StrData)})
+
+	p.validCheckPop(lexer.KEYWORD_BRACKET_CLOSE)
+
+	return call
 }
 
 func (p *Parser) doCallParse() CallObject {
@@ -209,7 +245,7 @@ func (p *Parser) doDefineParse() FunctionObject {
 		case lexer.DATA_BOOL:
 			fun.StaticData = makeBoolValueObj(object.Data.BoolData)
 		default:
-			panic(fmt.Sprintf("unexpected token in function definition: %%#v", object))
+			panic(fmt.Sprintf("unexpected token in function definition: %#v", object))
 		}
 	}
 
@@ -222,7 +258,7 @@ func (p *Parser) doDefineParse() FunctionObject {
 		for i := 0; i < len(tempArgs)-1; i++ {
 			// Check that parameters are just names and not calls
 			if len(tempArgs[i].Arguments) > 0 {
-				panic(fmt.Sprintf("callable object is not allowed as a parameter name: %%#v", tempArgs[i]))
+				panic(fmt.Sprintf("callable object is not allowed as a parameter name: %#v", tempArgs[i]))
 			}
 			fun.Parameters = append(fun.Parameters, tempArgs[i].Name)
 		}

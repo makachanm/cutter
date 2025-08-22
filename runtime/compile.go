@@ -1,6 +1,8 @@
 package runtime
 
 import (
+	"cutter/etc"
+	"cutter/lexer"
 	"cutter/parser"
 	"fmt"
 )
@@ -37,6 +39,34 @@ func (c *Compiler) CompileASTToVMInstr(input parser.HeadNode) []VMInstr {
 	instructions := make([]VMInstr, 0)
 	c.reg.reset()
 
+	// Pre-pass: handle includes
+	newBodys := make([]parser.BodyObject, 0)
+	for _, item := range input.Bodys {
+		if item.Type == parser.FUNCTION_CALL && item.Call.Name == "include" {
+			if len(item.Call.Arguments) != 1 {
+				panic("'include' function requires 1 argument: a file path")
+			}
+			filePathArg := item.Call.Arguments[0]
+			if filePathArg.Type != parser.ARG_LITERAL || filePathArg.Literal.Type != parser.STRING {
+				panic("'include' function argument must be a string literal")
+			}
+			filePath := filePathArg.Literal.StringData
+			content, err := etc.ReadFile(filePath)
+			if err != nil {
+				panic(fmt.Sprintf("failed to read file: %s", err))
+			}
+			lex := lexer.NewLexer()
+			tokens := lex.DoLex(content)
+			p := parser.NewParser()
+			ast := p.DoParse(tokens)
+
+			newBodys = append(newBodys, ast.Bodys...)
+		} else {
+			newBodys = append(newBodys, item)
+		}
+	}
+	input.Bodys = newBodys
+
 	// First pass: gather all function definitions
 	for _, items := range input.Bodys {
 		if items.Type == parser.FUCNTION_DEFINITION {
@@ -51,6 +81,9 @@ func (c *Compiler) CompileASTToVMInstr(input parser.HeadNode) []VMInstr {
 			instructions = append(instructions, c.CompileFunctionDefToVMInstr(items.Func)...)
 
 		case parser.FUNCTION_CALL:
+			if items.Call.Name == "include" {
+				continue
+			}
 			callInstructions := c.CompileFunctionCallToVMInstr(items.Call, []string{}, len(instructions))
 			instructions = append(instructions, callInstructions...)
 			// After a top-level call, store the result in stdout
@@ -230,7 +263,7 @@ func (c *Compiler) CompileFunctionCallToVMInstr(call parser.CallObject, argNames
 			if isStandard {
 				instructions = append(instructions, VMInstr{Op: OpRegMov, Oprand1: makeIntValueObj(int64(intermediateReg)), Oprand2: makeIntValueObj(0)})
 				for j, reg := range argRegs {
-					instructions = append(instructions, VMInstr{Op: OpRegMov, Oprand1: makeIntValueObj(int64(reg)), Oprand2: makeIntValueObj(int64(j+1))})
+					instructions = append(instructions, VMInstr{Op: OpRegMov, Oprand1: makeIntValueObj(int64(reg)), Oprand2: makeIntValueObj(int64(j + 1))})
 				}
 			} else if isUserFunc {
 				if len(userFunc.Parameters) > 0 {
