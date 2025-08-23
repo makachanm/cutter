@@ -60,6 +60,21 @@ func GetStandardFuncs() map[string][]VMInstr {
 
 	// String Functions
 	StandardFuncs["strcontact"] = StandardFuncs["add"]
+	StandardFuncs["strlen"] = []VMInstr{
+		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_STR_LEN)},
+	}
+	StandardFuncs["stridx"] = []VMInstr{
+		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_STR_MATCH)},
+	}
+	StandardFuncs["strsub"] = []VMInstr{
+		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_STR_SUB)},
+	}
+	StandardFuncs["strrep"] = []VMInstr{
+		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_STR_REPLACE)},
+	}
+	StandardFuncs["strexp"] = []VMInstr{
+		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_STR_REGEXP)},
+	}
 
 	// Branching and Control Flow
 	StandardFuncs["ifel"] = []VMInstr{
