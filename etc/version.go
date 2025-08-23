@@ -1,3 +1,3 @@
 package etc
 
-const RUNTIMEVERSION = "0.1"
+const RUNTIMEVERSION = "0.2"
