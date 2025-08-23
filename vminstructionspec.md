@@ -59,3 +59,9 @@ Oprand1의 값이 참일 경우 Oprand2의 값을, 거짓일 경우 Oprand3의 �
 
 ### OpHlt
 VM을 정지시킨다.
+
+### OpJmp
+Oprand1에 지정된 주소로 점프한다.
+
+### OpJmpIfFalse
+Oprand1의 값이 거짓일 경우 Oand2에 지정된 주소로 점프한다.
