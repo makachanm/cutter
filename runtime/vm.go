@@ -1,9 +1,5 @@
 package runtime
 
-import (
-	"strconv"
-)
-
 type VM struct {
 	Stack   *CallStack
 	Program []VMInstr
@@ -137,31 +133,31 @@ func (vm *VM) Run() {
 		case OpAdd:
 			r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 			r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-			result := performOperation(r1, r2, func(a, b float64) float64 { return a + b }, func(a, b int64) int64 { return a + b }, func(a, b string) string { return a + b })
+			result := r1.Operate(r2, func(a, b float64) float64 { return a + b }, func(a, b int64) int64 { return a + b }, func(a, b string) string { return a + b })
 			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 
 		case OpSub:
 			r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 			r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-			result := performOperation(r1, r2, func(a, b float64) float64 { return a - b }, func(a, b int64) int64 { return a - b }, nil)
+			result := r1.Operate(r2, func(a, b float64) float64 { return a - b }, func(a, b int64) int64 { return a - b }, nil)
 			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 
 		case OpMul:
 			r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 			r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-			result := performOperation(r1, r2, func(a, b float64) float64 { return a * b }, func(a, b int64) int64 { return a * b }, nil)
+			result := r1.Operate(r2, func(a, b float64) float64 { return a * b }, func(a, b int64) int64 { return a * b }, nil)
 			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 
 		case OpDiv:
 			r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 			r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-			result := performOperation(r1, r2, func(a, b float64) float64 { return a / b }, func(a, b int64) int64 { return a / b }, nil)
+			result := r1.Operate(r2, func(a, b float64) float64 { return a / b }, func(a, b int64) int64 { return a / b }, nil)
 			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 
 		case OpMod:
 			r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 			r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-			result := performOperation(r1, r2, nil, func(a, b int64) int64 { return a % b }, nil)
+			result := r1.Operate(r2, nil, func(a, b int64) int64 { return a % b }, nil)
 			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 
 		case OpAnd:
@@ -187,35 +183,35 @@ func (vm *VM) Run() {
 		case OpCmpEq:
 			r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 			r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), VMDataObject{Type: BOOLEAN, BoolData: r1 == r2})
+			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), VMDataObject{Type: BOOLEAN, BoolData: r1.IsEqualTo(r2)})
 
 		case OpCmpNeq:
 			r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 			r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), VMDataObject{Type: BOOLEAN, BoolData: r1 != r2})
+			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), VMDataObject{Type: BOOLEAN, BoolData: r1.IsNotEqualTo(r2)})
 
 		case OpCmpGt:
 			r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 			r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-			result := performComparison(r1, r2, func(a, b float64) bool { return a > b }, func(a, b int64) bool { return a > b })
+			result := r1.Compare(r2, func(a, b float64) bool { return a > b }, func(a, b int64) bool { return a > b })
 			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 
 		case OpCmpLt:
 			r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 			r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-			result := performComparison(r1, r2, func(a, b float64) bool { return a < b }, func(a, b int64) bool { return a < b })
+			result := r1.Compare(r2, func(a, b float64) bool { return a < b }, func(a, b int64) bool { return a < b })
 			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 
 		case OpCmpGte:
 			r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 			r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-			result := performComparison(r1, r2, func(a, b float64) bool { return a >= b }, func(a, b int64) bool { return a >= b })
+			result := r1.Compare(r2, func(a, b float64) bool { return a >= b }, func(a, b int64) bool { return a >= b })
 			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 
 		case OpCmpLte:
 			r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 			r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-			result := performComparison(r1, r2, func(a, b float64) bool { return a <= b }, func(a, b int64) bool { return a <= b })
+			result := r1.Compare(r2, func(a, b float64) bool { return a <= b }, func(a, b int64) bool { return a <= b })
 			vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 
 		case OpBrch:
@@ -252,72 +248,6 @@ func (vm *VM) Run() {
 	}
 }
 
-func performComparison(r1, r2 VMDataObject, floatOp func(float64, float64) bool, intOp func(int64, int64) bool) VMDataObject {
-	// Default to false if types are incompatible
-	result := false
-
-	switch r1.Type {
-	case INTGER:
-		switch r2.Type {
-		case INTGER:
-			if intOp != nil {
-				result = intOp(r1.IntData, r2.IntData)
-			}
-		case REAL:
-			if floatOp != nil {
-				result = floatOp(float64(r1.IntData), r2.FloatData)
-			}
-		}
-	case REAL:
-		switch r2.Type {
-		case INTGER:
-			if floatOp != nil {
-				result = floatOp(r1.FloatData, float64(r2.IntData))
-			}
-		case REAL:
-			if floatOp != nil {
-				result = floatOp(r1.FloatData, r2.FloatData)
-			}
-		}
-	}
-	return VMDataObject{Type: BOOLEAN, BoolData: result}
-}
-
-func performOperation(r1, r2 VMDataObject, floatOp func(float64, float64) float64, intOp func(int64, int64) int64, strOp func(string, string) string) VMDataObject {
-	switch r1.Type {
-	case INTGER:
-		switch r2.Type {
-		case INTGER:
-			return VMDataObject{Type: INTGER, IntData: intOp(r1.IntData, r2.IntData)}
-		case REAL:
-			return VMDataObject{Type: REAL, FloatData: floatOp(float64(r1.IntData), r2.FloatData)}
-		case STRING:
-			return VMDataObject{Type: STRING, StringData: strOp(strconv.FormatInt(r1.IntData, 10), r2.StringData)}
-		}
-	case REAL:
-		switch r2.Type {
-		case INTGER:
-			return VMDataObject{Type: REAL, FloatData: floatOp(r1.FloatData, float64(r2.IntData))}
-		case REAL:
-			return VMDataObject{Type: REAL, FloatData: floatOp(r1.FloatData, r2.FloatData)}
-		case STRING:
-			return VMDataObject{Type: STRING, StringData: strOp(strconv.FormatFloat(r1.FloatData, 'f', -1, 64), r2.StringData)}
-		}
-	case STRING:
-		switch r2.Type {
-		case INTGER:
-			return VMDataObject{Type: STRING, StringData: strOp(r1.StringData, strconv.FormatInt(r2.IntData, 10))}
-		case REAL:
-			return VMDataObject{Type: STRING, StringData: strOp(r1.StringData, strconv.FormatFloat(r2.FloatData, 'f', -1, 64))}
-		case STRING:
-			if strOp != nil {
-				return VMDataObject{Type: STRING, StringData: strOp(r1.StringData, r2.StringData)}
-			}
-		}
-	}
-	return VMDataObject{}
-}
-
 func (vm *VM) executeInstruction(instr VMInstr) {
 	switch instr.Op {
 	case OpRegSet:
@@ -350,27 +280,27 @@ func (vm *VM) executeInstruction(instr VMInstr) {
 	case OpAdd:
 		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-		result := performOperation(r1, r2, func(a, b float64) float64 { return a + b }, func(a, b int64) int64 { return a + b }, func(a, b string) string { return a + b })
+		result := r1.Operate(r2, func(a, b float64) float64 { return a + b }, func(a, b int64) int64 { return a + b }, func(a, b string) string { return a + b })
 		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 	case OpSub:
 		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-		result := performOperation(r1, r2, func(a, b float64) float64 { return a - b }, func(a, b int64) int64 { return a - b }, nil)
+		result := r1.Operate(r2, func(a, b float64) float64 { return a - b }, func(a, b int64) int64 { return a - b }, nil)
 		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 	case OpMul:
 		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-		result := performOperation(r1, r2, func(a, b float64) float64 { return a * b }, func(a, b int64) int64 { return a * b }, nil)
+		result := r1.Operate(r2, func(a, b float64) float64 { return a * b }, func(a, b int64) int64 { return a * b }, nil)
 		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 	case OpDiv:
 		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-		result := performOperation(r1, r2, func(a, b float64) float64 { return a / b }, func(a, b int64) int64 { return a / b }, nil)
+		result := r1.Operate(r2, func(a, b float64) float64 { return a / b }, func(a, b int64) int64 { return a / b }, nil)
 		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 	case OpMod:
 		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-		result := performOperation(r1, r2, nil, func(a, b int64) int64 { return a % b }, nil)
+		result := r1.Operate(r2, nil, func(a, b int64) int64 { return a % b }, nil)
 		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 	case OpAnd:
 		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
@@ -392,30 +322,30 @@ func (vm *VM) executeInstruction(instr VMInstr) {
 	case OpCmpEq:
 		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), VMDataObject{Type: BOOLEAN, BoolData: r1 == r2})
+		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), VMDataObject{Type: BOOLEAN, BoolData: r1.IsEqualTo(r2)})
 	case OpCmpNeq:
 		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), VMDataObject{Type: BOOLEAN, BoolData: r1 != r2})
+		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), VMDataObject{Type: BOOLEAN, BoolData: r1.IsNotEqualTo(r2)})
 	case OpCmpGt:
 		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-		result := performComparison(r1, r2, func(a, b float64) bool { return a > b }, func(a, b int64) bool { return a > b })
+		result := r1.Compare(r2, func(a, b float64) bool { return a > b }, func(a, b int64) bool { return a > b })
 		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 	case OpCmpLt:
 		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-		result := performComparison(r1, r2, func(a, b float64) bool { return a < b }, func(a, b int64) bool { return a < b })
+		result := r1.Compare(r2, func(a, b float64) bool { return a < b }, func(a, b int64) bool { return a < b })
 		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 	case OpCmpGte:
 		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-		result := performComparison(r1, r2, func(a, b float64) bool { return a >= b }, func(a, b int64) bool { return a >= b })
+		result := r1.Compare(r2, func(a, b float64) bool { return a >= b }, func(a, b int64) bool { return a >= b })
 		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 	case OpCmpLte:
 		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
-		result := performComparison(r1, r2, func(a, b float64) bool { return a <= b }, func(a, b int64) bool { return a <= b })
+		result := r1.Compare(r2, func(a, b float64) bool { return a <= b }, func(a, b int64) bool { return a <= b })
 		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 	case OpBrch:
 		condition := vm.Reg.GetRegister(int(instr.Oprand1.IntData))

@@ -13,6 +13,13 @@ const (
 	SYS_STR_MATCH       = 5
 	SYS_STR_REPLACE     = 6
 	SYS_STR_REGEXP      = 7
+	SYS_ARR_MAKE        = 8
+	SYS_ARR_PUSH        = 9
+	SYS_ARR_SET         = 10
+	SYS_ARR_GET         = 11
+	SYS_ARR_DELETE      = 12
+	SYS_ARR_LEN         = 13
+	SYS_ARR_HAS         = 14
 )
 
 func doSyscall(vm *VM, instr VMInstr) {
@@ -56,8 +63,9 @@ func doSyscall(vm *VM, instr VMInstr) {
 		str := vm.Reg.GetRegister(0)
 		if str.Type != STRING {
 			panic("SYS_STR_LEN: First argument must be a string")
+		} else {
+			vm.Reg.InsertResult(VMDataObject{Type: INTGER, IntData: int64(len(str.StringData))})
 		}
-		vm.Reg.InsertResult(VMDataObject{Type: INTGER, IntData: int64(len(str.StringData))})
 	case SYS_STR_SUB:
 		str := vm.Reg.GetRegister(0)
 		start := vm.Reg.GetRegister(1)
@@ -93,5 +101,48 @@ func doSyscall(vm *VM, instr VMInstr) {
 		re := regexp.MustCompile(pattern.StringData)
 		matches := re.FindAllString(str.StringData, -1)
 		vm.Reg.InsertResult(VMDataObject{Type: STRING, StringData: strings.Join(matches, " ")})
+	case SYS_ARR_MAKE:
+		arrName := vm.Reg.GetRegister(0)
+		if arrName.Type != STRING {
+			panic("SYS_ARR_MAKE: First argument must be a string (array name)")
+		}
+		vm.Mem.MakeArray(arrName.StringData)
+		vm.Reg.InsertResult(VMDataObject{Type: BOOLEAN, BoolData: true})
+
+	case SYS_ARR_PUSH:
+		arrName := vm.Reg.GetRegister(0)
+		value := vm.Reg.GetRegister(1)
+		if arrName.Type != STRING {
+			panic("SYS_ARR_PUSH: First argument must be a string (array name)")
+		}
+		vm.Mem.PushArrayItem(arrName.StringData, value)
+		vm.Reg.InsertResult(VMDataObject{Type: BOOLEAN, BoolData: true})
+
+	case SYS_ARR_SET:
+		arrName := vm.Reg.GetRegister(0)
+		index := vm.Reg.GetRegister(1)
+		value := vm.Reg.GetRegister(2)
+		if arrName.Type != STRING || index.Type != INTGER {
+			panic("SYS_ARR_SET: Invalid arguments")
+		}
+		vm.Mem.SetArrayItem(arrName.StringData, int(index.IntData), value)
+		vm.Reg.InsertResult(VMDataObject{Type: BOOLEAN, BoolData: true})
+
+	case SYS_ARR_GET:
+		arrName := vm.Reg.GetRegister(0)
+		index := vm.Reg.GetRegister(1)
+		if arrName.Type != STRING || index.Type != INTGER {
+			panic("SYS_ARR_GET: Invalid arguments")
+		}
+		value := vm.Mem.GetArray(arrName.StringData)[int(index.IntData)]
+		vm.Reg.InsertResult(value)
+
+	case SYS_ARR_LEN:
+		arrName := vm.Reg.GetRegister(0)
+		if arrName.Type != STRING {
+			panic("SYS_ARR_LEN: First argument must be a string (array name)")
+		}
+		length := len(vm.Mem.GetArray(arrName.StringData))
+		vm.Reg.InsertResult(VMDataObject{Type: INTGER, IntData: int64(length)})
 	}
 }

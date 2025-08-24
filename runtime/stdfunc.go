@@ -106,5 +106,22 @@ func GetStandardFuncs() map[string][]VMInstr {
 		{Op: OpHlt}, // Stop execution
 	}
 
+	// Array Functions
+	StandardFuncs["arrmake"] = []VMInstr{
+		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_ARR_MAKE)}, // SYS_ARRAY_MAKE
+	}
+	StandardFuncs["arrpush"] = []VMInstr{
+		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_ARR_PUSH)}, // SYS_ARRAY_PUSH
+	}
+	StandardFuncs["arrset"] = []VMInstr{
+		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_ARR_SET)}, // SYS_ARRAY_SET
+	}
+	StandardFuncs["arrget"] = []VMInstr{
+		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_ARR_GET)}, // SYS_ARRAY_GET
+	}
+	StandardFuncs["arrlen"] = []VMInstr{
+		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_ARR_LEN)}, // SYS_ARRAY_LEN
+	}
+
 	return StandardFuncs
 }

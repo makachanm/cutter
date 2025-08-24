@@ -167,9 +167,9 @@ func (c *Compiler) compileArgument(arg parser.Argument, argNames []string, targe
 		if isParam {
 			instructions = append(instructions, VMInstr{Op: OpRegMov, Oprand1: makeIntValueObj(int64(paramIndex)), Oprand2: makeIntValueObj(int64(targetReg))})
 		} else if _, isUserFunc := c.funcInfo[arg.VarName]; isUserFunc {
-			instructions = append(instructions, VMInstr{Op: OpRegSet, Oprand1: makeIntValueObj(int64(targetReg)), Oprand2: makeStrValueObj(arg.VarName)})
-		} else if _, isStdFunc := c.standardFuncs[arg.VarName]; isStdFunc {
-			instructions = append(instructions, VMInstr{Op: OpRegSet, Oprand1: makeIntValueObj(int64(targetReg)), Oprand2: makeStrValueObj(arg.VarName)})
+			nestedCallInstructions := c.CompileFunctionCallToVMInstr(parser.CallObject{Name: arg.VarName}, make([]string, 0), currentOffset)
+			instructions = append(instructions, nestedCallInstructions...)
+			instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(targetReg))})
 		} else {
 			instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(targetReg)), Oprand2: makeStrValueObj(arg.VarName)})
 		}
@@ -184,7 +184,8 @@ func (c *Compiler) compileArgument(arg parser.Argument, argNames []string, targe
 func (c *Compiler) CompileFunctionCallToVMInstr(call parser.CallObject, argNames []string, currentOffset int) []VMInstr {
 	instructions := make([]VMInstr, 0)
 
-	if call.Name == "for" {
+	switch call.Name {
+	case "for":
 		if len(call.Arguments) != 2 {
 			panic("'for' function requires 2 arguments: a condition and a body")
 		}
@@ -216,7 +217,7 @@ func (c *Compiler) CompileFunctionCallToVMInstr(call parser.CallObject, argNames
 		instructions[len(condInstructions)].Oprand2 = makeIntValueObj(int64(loopEndOffset))
 
 		return instructions
-	} else if call.Name == "chain" {
+	case "chain":
 		if len(call.Arguments) == 0 {
 			return instructions
 		}
