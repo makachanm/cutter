@@ -2,4 +2,7 @@
 cutter
 example*
 *.cm
+*.sh
+*.css
+*.js
 *.html

@@ -165,11 +165,14 @@ func (c *Compiler) compileArgument(arg parser.Argument, argNames []string, targe
 		}
 
 		if isParam {
+			fmt.Println("param", arg)
+			instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(paramIndex)), Oprand2: makeStrValueObj(arg.VarName)})
 			instructions = append(instructions, VMInstr{Op: OpRegMov, Oprand1: makeIntValueObj(int64(paramIndex)), Oprand2: makeIntValueObj(int64(targetReg))})
 		} else if _, isUserFunc := c.funcInfo[arg.VarName]; isUserFunc {
 			nestedCallInstructions := c.CompileFunctionCallToVMInstr(parser.CallObject{Name: arg.VarName}, make([]string, 0), currentOffset)
 			instructions = append(instructions, nestedCallInstructions...)
 			instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(targetReg))})
+			fmt.Println("usr", arg)
 		} else {
 			instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(targetReg)), Oprand2: makeStrValueObj(arg.VarName)})
 		}
@@ -177,6 +180,8 @@ func (c *Compiler) compileArgument(arg parser.Argument, argNames []string, targe
 		nestedCallInstructions := c.CompileFunctionCallToVMInstr(arg.Callable, argNames, currentOffset+len(instructions))
 		instructions = append(instructions, nestedCallInstructions...)
 		instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(targetReg))})
+		instructions = append(instructions, VMInstr{Op: OpStr, Oprand1: makeIntValueObj(int64(targetReg)), Oprand2: makeStrValueObj(arg.Callable.Name)})
+
 	}
 	return instructions
 }
@@ -317,6 +322,9 @@ func (c *Compiler) CompileFunctionCallToVMInstr(call parser.CallObject, argNames
 		}
 	} else { // User-defined function
 		userFunc, _ := c.funcInfo[call.Name]
+		if len(call.Arguments) != len(userFunc.Parameters) {
+			panic(fmt.Sprintf("function '%s' expects %d arguments, but got %d", call.Name, len(userFunc.Parameters), len(call.Arguments)))
+		}
 		for i, arg := range call.Arguments {
 			sname := userFunc.Parameters[i]
 			switch arg.Type {

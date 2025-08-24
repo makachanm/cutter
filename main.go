@@ -44,7 +44,8 @@ func main() {
 	if *debugFlag {
 		fmt.Println(" ----- INSTRUCTIONS -----")
 
-		for _, instr := range vmInstr {
+		for i, instr := range vmInstr {
+			fmt.Print(i, " ")
 			fmt.Println(runtime.ResolveVMInstruction(instr))
 		}
 	}

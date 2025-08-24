@@ -1,5 +1,7 @@
 package runtime
 
+import "fmt"
+
 type VM struct {
 	Stack   *CallStack
 	Program []VMInstr
@@ -280,6 +282,7 @@ func (vm *VM) executeInstruction(instr VMInstr) {
 	case OpAdd:
 		r1 := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
 		r2 := vm.Reg.GetRegister(int(instr.Oprand2.IntData))
+		fmt.Println(r1, r2)
 		result := r1.Operate(r2, func(a, b float64) float64 { return a + b }, func(a, b int64) int64 { return a + b }, func(a, b string) string { return a + b })
 		vm.Reg.InsertRegister(int(instr.Oprand3.IntData), result)
 	case OpSub:
