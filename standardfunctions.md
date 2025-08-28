@@ -81,7 +81,7 @@
 첫 번째 인수로 받은 운영체제 명령어를 실행하고, 성공 여부를 참(true) 또는 거짓(false)으로 반환합니다.
 
 ### getos
-운영체제의 커널 타입을 정수로 반환합니다. (linux: 1, bsd: 2, darwin: 3, windows: 4, other: 5)
+운영체제의 커널 타입을 문자열로 반환합니다. (Linux: `linux`, FreeBSD/OpenBSD/NetBSD/DragonflyBSD: `bsd`, Apple Darwin: `darwin`, Windows NT: `nt`, other: `other`)
 
 ## Array Functions
 
@@ -102,11 +102,11 @@
 
 ## Conversion Functions
 
-### to_int
+### convint
 인수로 받은 값을 정수로 변환하여 반환합니다.
 
-### to_real
+### convreal
 인수로 받은 값을 실수로 변환하여 반환합니다.
 
-### to_str
+### convstr
 인수로 받은 값을 문자열로 변환하여 반환합니다.

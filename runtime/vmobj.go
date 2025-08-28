@@ -90,34 +90,50 @@ func (r1 VMDataObject) Operate(r2 VMDataObject, floatOp func(float64, float64) f
 	case INTGER:
 		switch r2.Type {
 		case INTGER:
-			return VMDataObject{Type: INTGER, IntData: intOp(r1.IntData, r2.IntData)}
+			if intOp != nil {
+				return VMDataObject{Type: INTGER, IntData: intOp(r1.IntData, r2.IntData)}
+			}
 		case REAL:
-			return VMDataObject{Type: REAL, FloatData: floatOp(float64(r1.IntData), r2.FloatData)}
+			if floatOp != nil {
+				return VMDataObject{Type: REAL, FloatData: floatOp(float64(r1.IntData), r2.FloatData)}
+			}
 		case STRING:
-			return VMDataObject{Type: STRING, StringData: strOp(strconv.FormatInt(r1.IntData, 10), r2.StringData)}
+			if strOp != nil {
+				return VMDataObject{Type: STRING, StringData: strOp(strconv.FormatInt(r1.IntData, 10), r2.StringData)}
+			}
 		}
 	case REAL:
 		switch r2.Type {
 		case INTGER:
-			return VMDataObject{Type: REAL, FloatData: floatOp(r1.FloatData, float64(r2.IntData))}
+			if floatOp != nil {
+				return VMDataObject{Type: REAL, FloatData: floatOp(r1.FloatData, float64(r2.IntData))}
+			}
 		case REAL:
-			return VMDataObject{Type: REAL, FloatData: floatOp(r1.FloatData, r2.FloatData)}
+			if floatOp != nil {
+				return VMDataObject{Type: REAL, FloatData: floatOp(r1.FloatData, r2.FloatData)}
+			}
 		case STRING:
-			return VMDataObject{Type: STRING, StringData: strOp(strconv.FormatFloat(r1.FloatData, 'f', -1, 64), r2.StringData)}
+			if strOp != nil {
+				return VMDataObject{Type: STRING, StringData: strOp(strconv.FormatFloat(r1.FloatData, 'f', -1, 64), r2.StringData)}
+			}
 		}
 	case STRING:
 		switch r2.Type {
 		case INTGER:
-			return VMDataObject{Type: STRING, StringData: strOp(r1.StringData, strconv.FormatInt(r2.IntData, 10))}
+			if strOp != nil {
+				return VMDataObject{Type: STRING, StringData: strOp(r1.StringData, strconv.FormatInt(r2.IntData, 10))}
+			}
 		case REAL:
-			return VMDataObject{Type: STRING, StringData: strOp(r1.StringData, strconv.FormatFloat(r2.FloatData, 'f', -1, 64))}
+			if strOp != nil {
+				return VMDataObject{Type: STRING, StringData: strOp(r1.StringData, strconv.FormatFloat(r2.FloatData, 'f', -1, 64))}
+			}
 		case STRING:
 			if strOp != nil {
 				return VMDataObject{Type: STRING, StringData: strOp(r1.StringData, r2.StringData)}
 			}
 		}
 	}
-	return VMDataObject{}
+	panic("Unsupported operation")
 }
 
 func (obj *VMDataObject) CastTo(d_type ValueType) VMDataObject {
@@ -159,7 +175,7 @@ func (obj *VMDataObject) CastTo(d_type ValueType) VMDataObject {
 	case STRING:
 		switch obj.Type {
 		case INTGER:
-			return makeStrValueObj(string(obj.IntData))
+			return makeStrValueObj(strconv.FormatInt(obj.IntData, 10))
 		case REAL:
 			return makeStrValueObj(strconv.FormatFloat(obj.FloatData, 'f', -1, 64))
 

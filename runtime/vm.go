@@ -379,6 +379,18 @@ func (vm *VM) executeInstruction(instr VMInstr) {
 		// This is a control flow instruction and should only be handled by the main Run loop.
 		panic("OpJmpIfFalse should not be called from executeInstruction")
 
+	case OpCstInt:
+		target := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+		vm.Reg.InsertResult(target.CastTo(INTGER))
+
+	case OpCstReal:
+		target := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+		vm.Reg.InsertResult(target.CastTo(REAL))
+
+	case OpCstStr:
+		target := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+		vm.Reg.InsertResult(target.CastTo(STRING))
+
 	case OpClearReg:
 		vm.Reg.ClearRegisters()
 

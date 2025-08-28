@@ -171,19 +171,19 @@ func doSyscall(vm *VM, instr VMInstr) {
 
 	case SYS_GET_OS_TYPE:
 		osType := runtime.GOOS
-		var osCode int64
+		var osName string
 		switch osType {
 		case "linux":
-			osCode = 1
+			osName = "linux"
 		case "freebsd", "openbsd", "netbsd", "dragonfly":
-			osCode = 2
+			osName = "bsd"
 		case "darwin":
-			osCode = 3
+			osName = "darwin"
 		case "windows":
-			osCode = 4
+			osName = "nt"
 		default:
-			osCode = 5
+			osName = "other"
 		}
-		vm.Reg.InsertResult(makeIntValueObj(osCode))
+		vm.Reg.InsertResult(makeStrValueObj(osName))
 	}
 }
