@@ -120,6 +120,66 @@ func (r1 VMDataObject) Operate(r2 VMDataObject, floatOp func(float64, float64) f
 	return VMDataObject{}
 }
 
+func (obj *VMDataObject) CastTo(d_type ValueType) VMDataObject {
+	switch d_type {
+	case INTGER:
+		switch obj.Type {
+		case REAL:
+			val := int64(obj.FloatData)
+			return makeIntValueObj(val)
+		case STRING:
+			val, err := strconv.ParseInt(obj.StringData, 10, 64)
+			if err != nil {
+				panic("Error Occured in Converting Object - " + err.Error())
+			}
+			return makeIntValueObj(val)
+
+		default:
+			panic("Object cannot be converted to " + string(d_type))
+
+		}
+
+	case REAL:
+		switch obj.Type {
+		case INTGER:
+			val := float64(obj.IntData)
+			return makeRealValueObj(val)
+		case STRING:
+			val, err := strconv.ParseFloat(obj.StringData, 64)
+			if err != nil {
+				panic("Error Occured in Converting Object - " + err.Error())
+			}
+			return makeRealValueObj(val)
+
+		default:
+			panic("Object cannot be converted to " + string(d_type))
+
+		}
+
+	case STRING:
+		switch obj.Type {
+		case INTGER:
+			return makeStrValueObj(string(obj.IntData))
+		case REAL:
+			return makeStrValueObj(strconv.FormatFloat(obj.FloatData, 'f', -1, 64))
+
+		case BOOLEAN:
+			if obj.BoolData {
+				return makeStrValueObj("!t")
+			} else {
+				return makeStrValueObj("!f")
+			}
+
+		default:
+			panic("Object cannot be converted to " + string(d_type))
+
+		}
+
+	default:
+		panic("Object cannot be converted to " + string(d_type))
+	}
+}
+
 type VMFunctionObject struct {
 	JumpPc       int
 	IsStandard   bool
@@ -304,6 +364,10 @@ const (
 	OpBrch
 	OpJmp
 	OpJmpIfFalse
+
+	OpCstInt
+	OpCstReal
+	OpCstStr
 
 	OpClearReg
 	OpHlt

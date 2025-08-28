@@ -237,6 +237,18 @@ func (vm *VM) Run() {
 				continue
 			}
 
+		case OpCstInt:
+			target := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+			vm.Reg.InsertResult(target.CastTo(INTGER))
+
+		case OpCstReal:
+			target := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+			vm.Reg.InsertResult(target.CastTo(REAL))
+
+		case OpCstStr:
+			target := vm.Reg.GetRegister(int(instr.Oprand1.IntData))
+			vm.Reg.InsertResult(target.CastTo(STRING))
+
 		case OpClearReg:
 			vm.Reg.ClearRegisters()
 

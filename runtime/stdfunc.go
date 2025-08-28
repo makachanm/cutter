@@ -123,5 +123,26 @@ func GetStandardFuncs() map[string][]VMInstr {
 		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_ARR_LEN)}, // SYS_ARRAY_LEN
 	}
 
+	StandardFuncs["getenv"] = []VMInstr{
+		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_GET_ENV)}, // SYS_GET_ENV
+	}
+	StandardFuncs["exec"] = []VMInstr{
+		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_EXEC_CMD)}, // SYS_EXEC_CMD
+	}
+	StandardFuncs["getos"] = []VMInstr{
+		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_GET_OS_TYPE)}, // SYS_GET
+	}
+
+	// Conversion Functions
+	StandardFuncs["convint"] = []VMInstr{
+		{Op: OpCstInt, Oprand1: makeIntValueObj(0)},
+	}
+	StandardFuncs["convreal"] = []VMInstr{
+		{Op: OpCstReal, Oprand1: makeIntValueObj(0)},
+	}
+	StandardFuncs["convstr"] = []VMInstr{
+		{Op: OpCstStr, Oprand1: makeIntValueObj(0)},
+	}
+
 	return StandardFuncs
 }

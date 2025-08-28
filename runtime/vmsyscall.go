@@ -1,7 +1,10 @@
 package runtime
 
 import (
+	"os"
+	"os/exec"
 	"regexp"
+	"runtime"
 	"strings"
 )
 
@@ -19,7 +22,9 @@ const (
 	SYS_ARR_GET         = 11
 	SYS_ARR_DELETE      = 12
 	SYS_ARR_LEN         = 13
-	SYS_ARR_HAS         = 14
+	SYS_GET_ENV         = 14
+	SYS_EXEC_CMD        = 15
+	SYS_GET_OS_TYPE     = 16
 )
 
 func doSyscall(vm *VM, instr VMInstr) {
@@ -144,5 +149,41 @@ func doSyscall(vm *VM, instr VMInstr) {
 		}
 		length := len(vm.Mem.GetArray(arrName.StringData))
 		vm.Reg.InsertResult(VMDataObject{Type: INTGER, IntData: int64(length)})
+	case SYS_GET_ENV:
+		varName := vm.Reg.GetRegister(0)
+		if varName.Type != STRING {
+			panic("SYS_GET_ENV: First argument must be a string (variable name)")
+		}
+		value := os.Getenv(varName.StringData)
+		vm.Reg.InsertResult(makeStrValueObj(value))
+	case SYS_EXEC_CMD:
+		cmdName := vm.Reg.GetRegister(0)
+		if cmdName.Type != STRING {
+			panic("SYS_EXEC_CMD: First argument must be a string (command)")
+		}
+		cmd := exec.Command("bash", "-c", cmdName.StringData)
+		out, err := cmd.Output()
+		if err != nil {
+			panic("SYS_EXEC_CMD: Error Occur - " + err.Error())
+		} else {
+			vm.Reg.InsertResult(makeStrValueObj(string(out)))
+		}
+
+	case SYS_GET_OS_TYPE:
+		osType := runtime.GOOS
+		var osCode int64
+		switch osType {
+		case "linux":
+			osCode = 1
+		case "freebsd", "openbsd", "netbsd", "dragonfly":
+			osCode = 2
+		case "darwin":
+			osCode = 3
+		case "windows":
+			osCode = 4
+		default:
+			osCode = 5
+		}
+		vm.Reg.InsertResult(makeIntValueObj(osCode))
 	}
 }
