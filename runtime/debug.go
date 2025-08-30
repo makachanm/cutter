@@ -6,10 +6,15 @@ import (
 
 func DumpRegisters(vm *VM) {
 	fmt.Println(" ----- REGISTERS -----")
+	if len(vm.Reg.ArgumentRegisterMap) <= 0 {
+		fmt.Println("REGISTER IS EMPTY")
+	}
+
 	for k, reg := range vm.Reg.ArgumentRegisterMap {
 		fmt.Printf("R%d: %s ", k, formatVMDataObject(vm.Reg.GetRegister(reg)))
 	}
 	fmt.Println("\nValue Register: ", formatVMDataObject(vm.Reg.ReturnValueRegister))
+	fmt.Println("Register Clear Count: ", vm.Reg.register_cleared_count)
 }
 
 func DumpMemory(vm *VM) {

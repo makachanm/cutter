@@ -26,7 +26,8 @@ type VMArgumentRegisters struct {
 	ArgumentRegisterMap    map[int]int
 	ReturnValueRegister    VMDataObject
 
-	last_allocated_area int
+	last_allocated_area    int
+	register_cleared_count int64
 }
 
 func NewRegister() VMArgumentRegisters {
@@ -35,7 +36,8 @@ func NewRegister() VMArgumentRegisters {
 		ArgumentRegisterMap:    make(map[int]int, 0),
 		ReturnValueRegister:    VMDataObject{},
 
-		last_allocated_area: 0,
+		last_allocated_area:    0,
+		register_cleared_count: 0,
 	}
 }
 
@@ -46,6 +48,7 @@ func (rg *VMArgumentRegisters) ClearRegisters() {
 	}
 
 	rg.last_allocated_area = 0
+	rg.register_cleared_count++
 }
 
 func (rg *VMArgumentRegisters) InsertRegister(idx int, val VMDataObject) {

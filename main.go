@@ -41,21 +41,21 @@ func main() {
 
 	vmInstr := com.CompileASTToVMInstr(ast)
 
-	if *debugFlag {
-		fmt.Println(" ----- INSTRUCTIONS -----")
-
-		for i, instr := range vmInstr {
-			fmt.Print(i, " ")
-			fmt.Println(runtime.ResolveVMInstruction(instr))
-		}
-	}
-
 	vm := runtime.NewVM(vmInstr)
 	vm.Run()
 
 	if *debugFlag {
 		runtime.DumpRegisters(vm)
 		runtime.DumpMemory(vm)
+	}
+
+	if *debugFlag {
+		fmt.Println(" ----- INSTRUCTIONS -----")
+
+		for i, instr := range vm.Program {
+			fmt.Print(i, " ")
+			fmt.Println(runtime.ResolveVMInstruction(instr))
+		}
 	}
 
 	result := vm.IO.ReadBuffer()
