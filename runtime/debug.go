@@ -4,15 +4,34 @@ import (
 	"fmt"
 )
 
-func DumpRegisters(vm *VM, len int) {
-	for i, reg := range vm.Reg.ArgumentRegisters {
-		if i >= len {
-			break
-		}
-
-		fmt.Printf("R%d: %s ", i, formatVMDataObject(reg))
+func DumpRegisters(vm *VM) {
+	fmt.Println(" ----- REGISTERS -----")
+	for k, reg := range vm.Reg.ArgumentRegisterMap {
+		fmt.Printf("R%d: %s ", k, formatVMDataObject(vm.Reg.GetRegister(reg)))
 	}
 	fmt.Println("\nValue Register: ", formatVMDataObject(vm.Reg.ReturnValueRegister))
+}
+
+func DumpMemory(vm *VM) {
+	fmt.Println(" ----- DATA TABLE -----")
+	for i, memdata := range vm.Mem.DataTable {
+		fmt.Println(i, ":", memdata)
+	}
+
+	fmt.Println(" ----- FUNCTION TABLE -----")
+	for i, memdata := range vm.Mem.FunctionTable {
+		fmt.Println(i, ":", memdata)
+	}
+
+	fmt.Println(" ----- DATA MEMORY -----")
+	for i, memdata := range vm.Mem.DataMemory {
+		fmt.Println(i, ":", memdata)
+	}
+
+	fmt.Println(" ----- FUNCTION MEMORY -----")
+	for i, memdata := range vm.Mem.FunctionMemory {
+		fmt.Println(i, ":", memdata)
+	}
 }
 
 func ResolveVMInstruction(instr VMInstr) string {

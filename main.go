@@ -54,26 +54,8 @@ func main() {
 	vm.Run()
 
 	if *debugFlag {
-		fmt.Println(" ----- DATA TABLE -----")
-		for i, memdata := range vm.Mem.DataTable {
-			fmt.Println(i, ":", memdata)
-		}
-
-		fmt.Println(" ----- FUNCTION TABLE -----")
-		for i, memdata := range vm.Mem.FunctionTable {
-			fmt.Println(i, ":", memdata)
-		}
-
-		fmt.Println(" ----- DATA MEMORY -----")
-		for i, memdata := range vm.Mem.DataMemory {
-			fmt.Println(i, ":", memdata)
-		}
-
-		fmt.Println(" ----- FUNCTION MEMORY -----")
-		for i, memdata := range vm.Mem.FunctionMemory {
-			fmt.Println(i, ":", memdata)
-		}
-
+		runtime.DumpRegisters(vm)
+		runtime.DumpMemory(vm)
 	}
 
 	result := vm.IO.ReadBuffer()
