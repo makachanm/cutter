@@ -2,14 +2,13 @@ package lexer
 
 import (
 	"sort"
-	"strings"
 )
 
 type Tokenizer struct {
 	pointer uint64
 	maxsize uint64
 
-	targets   string
+	targets   []rune
 	tokenized []Token
 }
 
@@ -25,45 +24,39 @@ func NewTokenizer() *Tokenizer {
 func (tk *Tokenizer) doTokenize(input string, size uint64) []Token {
 	tk.tokenized = make([]Token, 0)
 
-	tk.maxsize = size
-	tk.targets = input
+	tk.targets = []rune(input)
+	tk.maxsize = uint64(len(tk.targets))
 
-	token_type, token_size := tk.matchToken()
-	buffer := make([]string, 0)
+	buffer := make([]rune, 0)
 
 	for {
 		if tk.pointer >= tk.maxsize {
-			if d := strings.Join(buffer, ""); d != "" {
-				tk.tokenized = append(tk.tokenized, NewDataToken(NORM_STRINGS, strings.Join(buffer, "")))
+			if len(buffer) > 0 {
+				tk.tokenized = append(tk.tokenized, NewDataToken(NORM_STRINGS, string(buffer)))
 			}
 
 			tk.tokenized = append(tk.tokenized, NewToken(TERMINATOR))
 			break
 		}
 
-		token_type, token_size = tk.matchToken()
+		token_type, token_size := tk.matchToken()
 
 		if token_type != NORM_STRINGS {
-			if d := strings.Join(buffer, ""); d != "" {
-				tk.tokenized = append(tk.tokenized, NewDataToken(NORM_STRINGS, d))
+			if len(buffer) > 0 {
+				tk.tokenized = append(tk.tokenized, NewDataToken(NORM_STRINGS, string(buffer)))
 			}
 
 			buffer = buffer[:0]
 
 			tk.tokenized = append(tk.tokenized, NewToken(token_type))
-			tk.pointer += uint64(token_size) - 1
+			tk.pointer += uint64(token_size)
 		} else {
-			buffer = append(buffer, string(tk.targets[tk.pointer]))
+			buffer = append(buffer, tk.targets[tk.pointer])
+			tk.pointer++
 		}
-
-		tk.pointer++
 	}
 
 	return tk.tokenized
-}
-
-func (tk *Tokenizer) currCharVariableSize(size int) string {
-	return string(tk.targets[tk.pointer : tk.pointer+uint64(size)])
 }
 
 type tokenHead struct {
@@ -74,14 +67,22 @@ type tokenHead struct {
 func (tk *Tokenizer) matchToken() (TokenType, int) {
 	keyword_tokens := make([]tokenHead, 0)
 
-	for key := range KeywordMap {
-		if tk.pointer+uint64(len(key))-1 >= tk.maxsize {
+	for key, value := range KeywordMap {
+		keywordRunes := []rune(key)
+		if int(tk.pointer)+len(keywordRunes) > len(tk.targets) {
 			continue
 		}
 
-		value, exist := KeywordMap[tk.currCharVariableSize(len(key))]
-		if exist {
-			keyword_tokens = append(keyword_tokens, tokenHead{token: value, len: len(key)})
+		match := true
+		for i, r := range keywordRunes {
+			if tk.targets[tk.pointer+uint64(i)] != r {
+				match = false
+				break
+			}
+		}
+
+		if match {
+			keyword_tokens = append(keyword_tokens, tokenHead{token: value, len: len(keywordRunes)})
 		}
 	}
 
