@@ -10,6 +10,7 @@ import (
 type Compiler struct {
 	reg           *regAlloc
 	funcInfo      map[string]parser.FunctionObject
+	variableFuncs map[string]parser.ValueObject
 	standardFuncs map[string][]VMInstr
 }
 
@@ -17,6 +18,7 @@ func NewCompiler() *Compiler {
 	return &Compiler{
 		reg:           &regAlloc{},
 		funcInfo:      make(map[string]parser.FunctionObject),
+		variableFuncs: make(map[string]parser.ValueObject),
 		standardFuncs: GetStandardFuncs(),
 	}
 }
@@ -67,10 +69,18 @@ func (c *Compiler) CompileASTToVMInstr(input parser.HeadNode) []VMInstr {
 	}
 	input.Bodys = newBodys
 
-	// First pass: gather all function definitions
+	// First pass: gather all function definitions and variable functions
 	for _, items := range input.Bodys {
 		if items.Type == parser.FUCNTION_DEFINITION {
-			c.funcInfo[items.Func.Name] = items.Func
+			fnc := items.Func
+			if fnc.StaticData.Type != 0 && len(fnc.Parameters) == 0 {
+				// This is a variable function
+				c.variableFuncs[fnc.Name] = fnc.StaticData
+				instructions = append(instructions, VMInstr{Op: OpMemSet, Oprand1: makeStrValueObj(fnc.Name), Oprand2: transformToVMDataObject(fnc.StaticData)})
+			} else {
+				// This is a real function
+				c.funcInfo[fnc.Name] = fnc
+			}
 		}
 	}
 
@@ -78,7 +88,10 @@ func (c *Compiler) CompileASTToVMInstr(input parser.HeadNode) []VMInstr {
 	for _, items := range input.Bodys {
 		switch items.Type {
 		case parser.FUCNTION_DEFINITION:
-			instructions = append(instructions, c.CompileFunctionDefToVMInstr(items.Func)...)
+			// Only compile real functions
+			if _, isVarFunc := c.variableFuncs[items.Func.Name]; !isVarFunc {
+				instructions = append(instructions, c.CompileFunctionDefToVMInstr(items.Func)...)
+			}
 
 		case parser.FUNCTION_CALL:
 			if items.Call.Name == "include" {
@@ -113,35 +126,30 @@ func (c *Compiler) CompileFunctionDefToVMInstr(fnc parser.FunctionObject) []VMIn
 	instructions := make([]VMInstr, 0)
 	instructions = append(instructions, VMInstr{Op: OpDefFunc, Oprand1: makeStrValueObj(fnc.Name)})
 
-	if fnc.StaticData.Type != 0 {
+	argNames := fnc.Parameters
+
+	for i, name := range argNames {
+		instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(i)), Oprand2: makeStrValueObj(name)})
+	}
+
+	body := fnc.Body
+	_, isStandard := c.standardFuncs[body.Name]
+	_, isUserFunc := c.funcInfo[body.Name]
+	_, isVarFunc := c.variableFuncs[body.Name]
+
+	// If the body is not a known function and has no arguments, treat it as a variable lookup.
+	if len(body.Arguments) == 0 && !isStandard && !isUserFunc && !isVarFunc {
+		// It's a variable lookup. The value should be loaded and set as the result.
 		tempReg := c.reg.alloc()
-		instructions = append(instructions, VMInstr{Op: OpRegSet, Oprand1: makeIntValueObj(int64(tempReg)), Oprand2: transformToVMDataObject(fnc.StaticData)})
+
+		// OpLdr loads from memory (where params and global vars are) into a register.
+		instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(tempReg)), Oprand2: makeStrValueObj(body.Name)})
+		// OpRslSet sets the result register from another register.
 		instructions = append(instructions, VMInstr{Op: OpRslSet, Oprand1: makeIntValueObj(int64(tempReg))})
 	} else {
-		argNames := fnc.Parameters
-
-		for i, name := range argNames {
-			instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(i)), Oprand2: makeStrValueObj(name)})
-		}
-
-		body := fnc.Body
-		_, isStandard := c.standardFuncs[body.Name]
-		_, isUserFunc := c.funcInfo[body.Name]
-
-		// If the body is not a known function and has no arguments, treat it as a variable lookup.
-		if len(body.Arguments) == 0 && !isStandard && !isUserFunc {
-			// It's a variable lookup. The value should be loaded and set as the result.
-			tempReg := c.reg.alloc()
-
-			// OpLdr loads from memory (where params and global vars are) into a register.
-			instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(tempReg)), Oprand2: makeStrValueObj(body.Name)})
-			// OpRslSet sets the result register from another register.
-			instructions = append(instructions, VMInstr{Op: OpRslSet, Oprand1: makeIntValueObj(int64(tempReg))})
-		} else {
-			// It's a real function call.
-			bodyInstructions := c.CompileFunctionCallToVMInstr(body, argNames, len(instructions))
-			instructions = append(instructions, bodyInstructions...)
-		}
+		// It's a real function call.
+		bodyInstructions := c.CompileFunctionCallToVMInstr(body, argNames, len(instructions))
+		instructions = append(instructions, bodyInstructions...)
 	}
 
 	instructions = append(instructions, VMInstr{Op: OpReturn})
@@ -167,6 +175,10 @@ func (c *Compiler) compileArgument(arg parser.Argument, argNames []string, targe
 		if isParam {
 			instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(paramIndex)), Oprand2: makeStrValueObj(arg.VarName)})
 			instructions = append(instructions, VMInstr{Op: OpRegMov, Oprand1: makeIntValueObj(int64(paramIndex)), Oprand2: makeIntValueObj(int64(targetReg))})
+		} else if _, isVarFunc := c.variableFuncs[arg.VarName]; isVarFunc {
+			nestedCallInstructions := c.CompileFunctionCallToVMInstr(parser.CallObject{Name: arg.VarName}, make([]string, 0), currentOffset)
+			instructions = append(instructions, nestedCallInstructions...)
+			instructions = append(instructions, VMInstr{Op: OpRslMov, Oprand1: makeIntValueObj(int64(targetReg))})
 		} else if _, isUserFunc := c.funcInfo[arg.VarName]; isUserFunc {
 			nestedCallInstructions := c.CompileFunctionCallToVMInstr(parser.CallObject{Name: arg.VarName}, make([]string, 0), currentOffset)
 			instructions = append(instructions, nestedCallInstructions...)
@@ -186,6 +198,16 @@ func (c *Compiler) compileArgument(arg parser.Argument, argNames []string, targe
 
 func (c *Compiler) CompileFunctionCallToVMInstr(call parser.CallObject, argNames []string, currentOffset int) []VMInstr {
 	instructions := make([]VMInstr, 0)
+
+	if _, isVarFunc := c.variableFuncs[call.Name]; isVarFunc {
+		if len(call.Arguments) > 0 {
+			panic(fmt.Sprintf("variable function '%s' does not accept arguments", call.Name))
+		}
+		tempReg := c.reg.alloc()
+		instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(tempReg)), Oprand2: makeStrValueObj(call.Name)})
+		instructions = append(instructions, VMInstr{Op: OpRslSet, Oprand1: makeIntValueObj(int64(tempReg))})
+		return instructions
+	}
 
 	switch call.Name {
 	case "for":
@@ -329,7 +351,12 @@ func (c *Compiler) CompileFunctionCallToVMInstr(call parser.CallObject, argNames
 			case parser.ARG_LITERAL:
 				instructions = append(instructions, VMInstr{Op: OpMemSet, Oprand1: makeStrValueObj(sname), Oprand2: transformToVMDataObject(arg.Literal)})
 			case parser.ARG_VARIABLE:
-				if _, isUserFunc := c.funcInfo[arg.VarName]; isUserFunc {
+				if _, isVarFunc := c.variableFuncs[arg.VarName]; isVarFunc {
+					// It's a variable function, treat it as a variable lookup.
+					tempReg := c.reg.alloc()
+					instructions = append(instructions, VMInstr{Op: OpLdr, Oprand1: makeIntValueObj(int64(tempReg)), Oprand2: makeStrValueObj(arg.VarName)})
+					instructions = append(instructions, VMInstr{Op: OpStr, Oprand1: makeStrValueObj(sname), Oprand2: makeIntValueObj(int64(tempReg))})
+				} else if _, isUserFunc := c.funcInfo[arg.VarName]; isUserFunc {
 					// It's a function name, treat it as a string.
 					tempReg := c.reg.alloc()
 					instructions = append(instructions, VMInstr{Op: OpRegSet, Oprand1: makeIntValueObj(int64(tempReg)), Oprand2: makeStrValueObj(arg.VarName)})

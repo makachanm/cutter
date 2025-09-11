@@ -84,13 +84,11 @@ func GetStandardFuncs() map[string][]VMInstr {
 	// Memory and Variable Manipulation
 	StandardFuncs["set"] = []VMInstr{
 		// Arguments are expected to be in registers 0 and 1
-		// Reg 0: function name (string)
-		// Reg 1: value to return (VMDataObject)
+		// Reg 0: object name (string)
+		// Reg 1: value to set (VMDataObject)
 
-		// Call the syscall to set the function's return value
-		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_SET_FUNC_RETURN)},
-		// The syscall itself sets the result of the 'set' operation (true for success)
-		// So, no need for OpRslSet here, as the syscall already handles it.
+		// Call the syscall to set the object's value
+		{Op: OpSyscall, Oprand1: makeIntValueObj(SYS_MEM_SET)},
 	}
 
 	StandardFuncs["echo"] = []VMInstr{

@@ -9,53 +9,47 @@ import (
 )
 
 const (
-	SYS_SET_FUNC_RETURN = 1 // New syscall for setting function return value
-	SYS_IO_FLUSH        = 2
-	SYS_STR_LEN         = 3
-	SYS_STR_SUB         = 4
-	SYS_STR_MATCH       = 5
-	SYS_STR_REPLACE     = 6
-	SYS_STR_REGEXP      = 7
-	SYS_ARR_MAKE        = 8
-	SYS_ARR_PUSH        = 9
-	SYS_ARR_SET         = 10
-	SYS_ARR_GET         = 11
-	SYS_ARR_DELETE      = 12
-	SYS_ARR_LEN         = 13
-	SYS_GET_ENV         = 14
-	SYS_EXEC_CMD        = 15
-	SYS_GET_OS_TYPE     = 16
+	SYS_MEM_SET     = 1 // Modified syscall for setting any object's value
+	SYS_IO_FLUSH    = 2
+	SYS_STR_LEN     = 3
+	SYS_STR_SUB     = 4
+	SYS_STR_MATCH   = 5
+	SYS_STR_REPLACE = 6
+	SYS_STR_REGEXP  = 7
+	SYS_ARR_MAKE    = 8
+	SYS_ARR_PUSH    = 9
+	SYS_ARR_SET     = 10
+	SYS_ARR_GET     = 11
+	SYS_ARR_DELETE  = 12
+	SYS_ARR_LEN     = 13
+	SYS_GET_ENV     = 14
+	SYS_EXEC_CMD    = 15
+	SYS_GET_OS_TYPE = 16
 )
 
 func doSyscall(vm *VM, instr VMInstr) {
 	switch instr.Oprand1.IntData {
-	case SYS_SET_FUNC_RETURN:
-		// Expect function name in register 0 and return value in register 1
-		funcNameObj := vm.Reg.GetRegister(0)
-		returnValue := vm.Reg.GetRegister(1)
+	case SYS_MEM_SET:
+		// Expect object name in register 0 and value in register 1
+		objNameObj := vm.Reg.GetRegister(0)
+		value := vm.Reg.GetRegister(1)
 
-		if funcNameObj.Type != STRING {
-			panic("SYS_SET_FUNC_RETURN: First argument must be a string (function name)")
+		if objNameObj.Type != STRING {
+			panic("SYS_MEM_SET: First argument must be a string (object name)")
 		}
 
-		funcName := funcNameObj.StringData
+		objName := objNameObj.StringData
 
-		// Get the target function object
-		targetFunc := vm.Mem.GetFunc(funcName)
-
-		// Create new instructions for the target function
-		// These instructions will simply set the result register to the desired return value
-		newInstructions := []VMInstr{
-			{Op: OpDefFunc, Oprand1: makeStrValueObj(funcName)},               // Define the function entry point
-			{Op: OpRegSet, Oprand1: makeIntValueObj(0), Oprand2: returnValue}, // Set Reg 0 to the return value
-			{Op: OpRslSet, Oprand1: makeIntValueObj(0)},                       // Set result to Reg 0
-			{Op: OpReturn}, // Return from the function
+		// If the object is a function, we can't set it this way anymore.
+		// This syscall is now for data objects.
+		if !vm.Mem.HasObj(objName) {
+			panic("Cannot use 'set' on a function: " + objName)
 		}
 
-		targetPos := targetFunc.JumpPc - 1
-		for i, instr := range newInstructions {
-			vm.Program[targetPos+i] = instr
+		if !vm.Mem.HasObj(objName) {
+			vm.Mem.MakeObj(objName)
 		}
+		vm.Mem.SetObj(objName, value)
 
 		// Set the result of the syscall itself (e.g., true for success)
 		vm.Reg.InsertResult(VMDataObject{Type: BOOLEAN, BoolData: true})
